@@ -1,0 +1,21 @@
+DESCRIPTION = "AISlim AI-gateway image: no GUI, resources reserved for AI."
+LICENSE = "MIT"
+
+inherit core-image features_check
+
+REQUIRED_DISTRO_FEATURES = "opengl"
+
+# AI 网关：只留 SSH 管理入口，不装任何图形/桌面栈
+IMAGE_FEATURES += "ssh-server-openssh"
+
+CORE_IMAGE_BASE_INSTALL += " \
+    packagegroup-core-boot \
+    packagegroup-core-ssh-openssh \
+    "
+
+# ---- AI 计算包：确认 meta-tegra 实际包名后在这里追加 ----
+# 例如：
+#   tegra-libraries-cuda
+#   cudnn
+#   tensorrt-core
+#   ollama          (自建 recipe)

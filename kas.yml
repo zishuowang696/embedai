@@ -1,0 +1,105 @@
+header:
+  version: 22
+
+repos:
+  bitbake:
+    url: https://github.com/openembedded/bitbake.git
+    commit: e82cedc522721aae8a14058add287c75be8f45da
+    path: bitbake
+    layers:
+      '': disabled
+
+  openembedded-core:
+    url: https://github.com/openembedded/openembedded-core.git
+    commit: 20f678d825d1b8a1e8bfa88dedd51eb628c96d51
+    path: oe-core
+    layers:
+      meta:
+        prio: 99
+
+  meta-openembedded:
+    url: https://github.com/openembedded/meta-openembedded.git
+    commit: fe79e6e5c2cd009423e8f816ae91996cc86c3200
+    path: meta-oe
+    layers:
+      meta-oe:
+        prio: 85
+      meta-python:
+        prio: 80
+      meta-networking:
+        prio: 75
+      meta-filesystems:
+        prio: 70
+
+  meta-tegra:
+    url: https://github.com/OE4T/meta-tegra.git
+    commit: c4462f4fe68cb64ba1d7fccb03095c7f975509b4
+    path: meta-tegra
+    layers:
+      '':
+        prio: 90
+
+  meta-tegra-community:
+    url: https://github.com/OE4T/meta-tegra-community
+    commit: f0beedf81977fe6cd28f39912c53139290f5a6f4
+    path: meta-tegra-community
+    layers:
+      '':
+        prio: 50
+
+  meta-virtualization:
+    url: https://git.yoctoproject.org/meta-virtualization
+    commit: cbaa5b92b046a13585105713166c886cdfd5de33
+    path: meta-virtualization
+    layers:
+      '':
+        prio: 60
+
+  tegra-demo-distro:
+    url: https://github.com/OE4T/tegra-demo-distro.git
+    commit: 7645ec1e50844f068b39eef57aa6e1e26e963ae3
+    path: tegra-demo-distro
+    layers:
+      layers/meta-tegrademo:
+        prio: 20
+      layers/meta-tegra-support:
+        prio: 40
+      layers/meta-demo-ci:
+        prio: 30
+
+  meta-aislim:
+    path: meta-aislim
+    layers:
+      '':
+        prio: 10
+
+bblayers_conf_header:
+  standard: |
+    TD_BBLAYERS_CONF_VERSION = "aislim-7"
+
+distro: aislim
+machine: jetson-orin-nano-devkit-nvme
+target:
+  - aislim-image
+
+local_conf_header:
+  standard: |
+    CONF_VERSION = "2"
+    SDKMACHINE = "x86_64"
+    EXTRA_IMAGE_FEATURES = "allow-empty-password empty-root-password allow-root-login"
+    USER_CLASSES = "buildstats"
+    PATCHRESOLVE = "noop"
+    DL_DIR ?= "/home/admin/tegra/tegra-demo-distro/build/downloads"
+    SSTATE_DIR ?= "${TOPDIR}/sstate-cache"
+    SSTATE_MIRRORS = "file://.* file:///home/admin/tegra/tegra-demo-distro/build/sstate-cache/PATH"
+    BB_DISKMON_DIRS ??= "\
+        STOPTASKS,${TMPDIR},1G,100K \
+        STOPTASKS,${DL_DIR},1G,100K \
+        STOPTASKS,${SSTATE_DIR},1G,100K \
+        STOPTASKS,/tmp,100M,100K \
+        HALT,${TMPDIR},100M,1K \
+        HALT,${DL_DIR},100M,1K \
+        HALT,${SSTATE_DIR},100M,1K \
+        HALT,/tmp,10M,1K"
+    PACKAGECONFIG:append:pn-qemu-system-native = " sdl"
+    INHERIT += "rm_work"

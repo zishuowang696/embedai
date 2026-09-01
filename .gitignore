@@ -1,0 +1,12 @@
+# 上游仓库（由 kas 按 kas.yml 拉取，不进版本库）
+/bitbake/
+/oe-core/
+/meta-oe/
+/meta-tegra/
+/meta-tegra-community/
+/meta-virtualization/
+/tegra-demo-distro/
+
+# 构建产物
+/build/
+kas.lock
