@@ -82,6 +82,9 @@ jobs:
           docker-images: true
           swap-storage: true
 
+      - name: Show disk after cleanup
+        run: df -h /
+
       - name: Restore Yocto sstate
         uses: actions/cache/restore@v4
         with:
@@ -113,8 +116,10 @@ jobs:
             sleep 15
           done
 
-      - name: Build embedai-image
+      - name: Build embedai-image (with disk monitor)
         run: |
+          ( while true; do df -h / >> disk.log; sleep 120; done ) &
+          MON_PID=$!
           for i in 1 2; do
             if kas build kas-ci.yml; then
               break
@@ -122,6 +127,11 @@ jobs:
             echo "kas build attempt $i failed, retrying in 30s"
             sleep 30
           done
+          kill $MON_PID 2>/dev/null || true
+          echo "===== disk usage during build (tail) ====="
+          tail -20 disk.log || true
+          echo "===== final df ====="
+          df -h /
 
       - name: Save Yocto sstate
         uses: actions/cache/save@v4
