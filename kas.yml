@@ -67,20 +67,20 @@ repos:
       layers/meta-demo-ci:
         prio: 30
 
-  meta-aislim:
-    path: meta-aislim
+  meta-embedai:
+    path: meta-embedai
     layers:
       '':
         prio: 10
 
 bblayers_conf_header:
   standard: |
-    TD_BBLAYERS_CONF_VERSION = "aislim-7"
+    TD_BBLAYERS_CONF_VERSION = "embedai-7"
 
-distro: aislim
+distro: embedai
 machine: jetson-orin-nano-devkit-nvme
 target:
-  - aislim-image
+  - embedai-image
 
 local_conf_header:
   standard: |

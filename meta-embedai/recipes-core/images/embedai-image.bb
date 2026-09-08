@@ -1,4 +1,4 @@
-DESCRIPTION = "AISlim AI-gateway image: no GUI, resources reserved for AI."
+DESCRIPTION = "EmbedAI AI-gateway image: no GUI, resources reserved for AI."
 LICENSE = "MIT"
 
 inherit core-image features_check
