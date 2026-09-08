@@ -1,4 +1,4 @@
-# AISlim — Jetson AI 网关
+# EmbedAI — Jetson AI 网关
 
 裁剪 tegra，把资源极限留给 AI。
 
@@ -6,7 +6,7 @@
 
 基于 NVIDIA Jetson（Orin Nano DevKit NVMe）的 **AI 网关**：
 - 精简系统：无 GUI / 无桌面栈，只留 SSH 管理入口
-- 自建 distro 与 image：`aislim` / `aislim-image`
+- 自建 distro 与 image：`embedai` / `embedai-image`
 - 资源极限留给 AI：GPU/CUDA 计算能力保留，其余能省则省
 
 ## 构建方式：KAS
@@ -16,12 +16,12 @@
 ```
 ~/tegra-kas/
 ├── kas.yml                      # KAS 配置：仓库 + 层 + distro/machine/target
-├── meta-aislim/                 # 自建层
+├── meta-embedai/                 # 自建层
 │   ├── conf/
 │   │   ├── layer.conf
-│   │   └── distro/aislim.conf   # 自建 distro
+│   │   └── distro/embedai.conf   # 自建 distro
 │   ├── recipes-core/images/
-│   │   └── aislim-image.bb      # 自建精简镜像
+│   │   └── embedai-image.bb      # 自建精简镜像
 │   └── recipes-bsp/arm-trusted-firmware/
 │       └── arm-trusted-firmware_%.bbappend   # Python 3.10 兼容补丁
 └── build/                       # kas 生成的构建目录（不入库）
@@ -36,7 +36,7 @@
 
 ```bash
 kas checkout kas.yml      # 拉取并锁定各层
-kas build kas.yml         # 构建 aislim-image
+kas build kas.yml         # 构建 embedai-image
 kas shell kas.yml         # 进入 bitbake 环境
 kas dump kas.yml          # 查看最终展开配置
 ```
@@ -58,15 +58,15 @@ SSTATE_MIRRORS = "file://.* file:///旧路径/build/sstate-cache/PATH"  # 编译
 | 问题 | 原因 | 解决 |
 |------|------|------|
 | KAS 5.3 `layers` schema 报错 | 新版本不再支持 `path`/`priority` | 改为 `<repo.path>/<layer名>` + `prio`；bitbake 需 `layers: {'': disabled}` |
-| `tegra_distro_update_bblayersconf` 崩溃（`sanity_conf_read` 未定义） | 版本号不匹配才走更新逻辑 | `bblayers_conf_header` 补 `TD_BBLAYERS_CONF_VERSION = "aislim-7"` |
+| `tegra_distro_update_bblayersconf` 崩溃（`sanity_conf_read` 未定义） | 版本号不匹配才走更新逻辑 | `bblayers_conf_header` 补 `TD_BBLAYERS_CONF_VERSION = "embedai-7"` |
 | GitHub 超时拉不到仓库 | 网络不稳定 | 从本地已有 clone 预置仓库目录，kas 检测存在即跳过 |
-| `ImportError: cannot import name 'UTC' from 'datetime'` | meta-tegra 的 TF-A 配方需 Python 3.11+，宿主是 3.10 | `meta-aislim` 里用 `timezone.utc` 等价替换（bbappend） |
+| `ImportError: cannot import name 'UTC' from 'datetime'` | meta-tegra 的 TF-A 配方需 Python 3.11+，宿主是 3.10 | `meta-embedai` 里用 `timezone.utc` 等价替换（bbappend） |
 
 ## 下一步（资源精简清单）
 
-- [ ] 确认 meta-tegra 实际包名后，在 `aislim-image.bb` 追加 AI 包：`cudnn`、`tensorrt-core`、`tegra-libraries-cuda` 等
+- [ ] 确认 meta-tegra 实际包名后，在 `embedai-image.bb` 追加 AI 包：`cudnn`、`tensorrt-core`、`tegra-libraries-cuda` 等
 - [ ] 自建 `ollama` recipe（ARM64 原生部署，无需 docker）
-- [ ] 按需去掉 `pam` / `virtualization` distro 特性（`aislim.conf` 里有注释开关）
+- [ ] 按需去掉 `pam` / `virtualization` distro 特性（`embedai.conf` 里有注释开关）
 - [ ] 构建通过后删除旧 `build/tmp`、`build/cache` 腾空间
 
 ## License
