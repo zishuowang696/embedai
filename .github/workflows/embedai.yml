@@ -1,0 +1,138 @@
+name: embedai-build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # 快速门禁：只解析，PR/每次 push 都跑（1-3 分钟）
+  validate:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute layer cache key
+        id: cache-key
+        run: |
+          key=$(sed -n '/^repos:/,/^bblayers_conf_header:/p' kas.yml | sha256sum | cut -d' ' -f1)
+          echo "key=kas-layers-$key" >> "$GITHUB_OUTPUT"
+
+      - name: Restore layer checkouts
+        id: cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            bitbake
+            oe-core
+            meta-oe
+            meta-tegra
+            meta-tegra-community
+            meta-virtualization
+            tegra-demo-distro
+          key: ${{ steps.cache-key.outputs.key }}
+
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install kas
+        run: python -m pip install kas==5.3
+
+      - name: Expand config
+        run: kas dump kas.yml
+
+      - name: Parse all layers (bitbake -p)
+        run: kas shell kas.yml -c "bitbake -p"
+
+      - name: Save layer checkouts
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            bitbake
+            oe-core
+            meta-oe
+            meta-tegra
+            meta-tegra-community
+            meta-virtualization
+            tegra-demo-distro
+          key: ${{ steps.cache-key.outputs.key }}
+
+  # 完整编译：public 仓库 -> 4 核 16GB runner，靠 free-disk-space + sstate 缓存
+  build:
+    needs: validate
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 480
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - name: Restore Yocto sstate
+        uses: actions/cache/restore@v4
+        with:
+          path: build/sstate-cache
+          key: embedai-sstate-v1
+          restore-keys: |
+            embedai-sstate-v1
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq chrpath diffstat python3-websockets
+          python -m pip install kas==5.3
+
+      - name: Generate CI kas config (neutralize host paths)
+        run: |
+          sed -e 's|DL_DIR ?= "/home/admin/tegra/tegra-demo-distro/build/downloads"|DL_DIR ?= "${TOPDIR}/downloads"|' \
+              -e 's|SSTATE_MIRRORS = "file://.\* file:///home/admin/tegra/tegra-demo-distro/build/sstate-cache/PATH"|SSTATE_MIRRORS = ""|' \
+              kas.yml > kas-ci.yml
+          grep -E 'DL_DIR|SSTATE_MIRRORS|SSTATE_DIR' kas-ci.yml
+
+      - name: kas checkout (retry)
+        run: |
+          for i in 1 2 3; do
+            if kas checkout kas-ci.yml; then
+              break
+            fi
+            echo "kas checkout attempt $i failed, retrying in 15s"
+            sleep 15
+          done
+
+      - name: Build embedai-image
+        run: |
+          for i in 1 2; do
+            if kas build kas-ci.yml; then
+              break
+            fi
+            echo "kas build attempt $i failed, retrying in 30s"
+            sleep 30
+          done
+
+      - name: Save Yocto sstate
+        uses: actions/cache/save@v4
+        with:
+          path: build/sstate-cache
+          key: embedai-sstate-v1
+
+      - name: Upload image artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: embedai-image-jetson-orin-nano-devkit-nvme
+          path: build/tmp/deploy/images/jetson-orin-nano-devkit-nvme/embedai-image-*
+          if-no-files-found: warn
+          retention-days: 30
