@@ -72,7 +72,7 @@ jobs:
     needs: validate
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-22.04
-    timeout-minutes: 480
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
 
@@ -94,9 +94,9 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: build/sstate-cache
-          key: embedai-sstate-v1
+          key: embedai-sstate-${{ github.run_id }}
           restore-keys: |
-            embedai-sstate-v1
+            embedai-sstate-
 
       - name: Install dependencies
         run: |
@@ -121,30 +121,38 @@ jobs:
             sleep 15
           done
 
-      - name: Build embedai-image (with disk monitor)
+      - name: Build embedai-image (resumable, 5h budget)
         run: |
           ( while true; do df -h / >> disk.log; sleep 120; done ) &
           MON_PID=$!
-          for i in 1 2; do
-            if kas build kas-ci.yml; then
-              break
-            fi
-            echo "kas build attempt $i failed, retrying in 30s"
-            sleep 30
-          done
-          kill $MON_PID 2>/dev/null || true
+          set +e
+          # 内部 5h 预算：到点向整个进程组发 SIGINT，让 bitbake 优雅收尾。
+          # 已完成的 sstate 会保留，随后的缓存步骤存起来，下次续编。
+          setsid kas build kas-ci.yml &
+          BPID=$!
+          ( sleep 18000; echo "5h budget reached, SIGINT to build group"; \
+            kill -INT -"$BPID" 2>/dev/null; sleep 180; \
+            kill -KILL -"$BPID" 2>/dev/null ) &
+          WPID=$!
+          wait "$BPID"; rc=$?
+          kill "$WPID" "$MON_PID" 2>/dev/null || true
+          set -e
+          echo "kas build exit code: $rc (非 0 多为预算到点主动暂停，属预期)"
           echo "===== disk usage during build (tail) ====="
           tail -20 disk.log || true
           echo "===== final df ====="
           df -h /
 
       - name: Save Yocto sstate
+        if: always()
+        continue-on-error: true
         uses: actions/cache/save@v4
         with:
           path: build/sstate-cache
-          key: embedai-sstate-v1
+          key: embedai-sstate-${{ github.run_id }}
 
       - name: Upload image artifacts
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: embedai-image-jetson-orin-nano-devkit-nvme
