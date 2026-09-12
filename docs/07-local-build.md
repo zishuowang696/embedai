@@ -161,3 +161,17 @@ bitbake -e embedai-image | grep ^DL_DIR=     # 确认下载目录
 bitbake -e <recipe> | grep -E '^SRC_URI|^S='
 kas dump kas.yml                             # 查看最终展开配置
 ```
+
+## 6. fetch 相关命令对比
+
+| 命令 | 范围 | 编译依赖？ | 用途 |
+| --- | --- | --- | --- |
+| `bitbake -c fetch <recipe>` | **单个 recipe**（不递归依赖） | 否 | 补某个缺源 |
+| `bitbake --runall=fetch <target>` | 目标**整棵依赖树** | 否 | 首次预下载（推荐） |
+| `bitbake -c fetchall <target>` | 老伪任务（当前 OE-Core 已移除） | 否 | 遗留写法 |
+
+要点：
+
+- `bitbake -c fetch <recipe>` **只下载这一个 recipe 的 `SRC_URI`，不编译任何东西，也不会去 fetch 它的依赖**。对 image 目标用它几乎没用（image recipe 自身通常没有源码），预下载整棵树必须用 `--runall=fetch`。
+- 三者都**不编译**；"编译依赖包"是 `do_build` 默认链路才会做的事。`-c <task>` 的本质是"只跑到这个任务为止"。
+- 需要连依赖一起跑指定任务时才用 `--runall`；只想对单个 recipe 做某步就用 `-c`。
