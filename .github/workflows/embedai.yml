@@ -6,6 +6,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+# 同一分支只保留一个 run：新 push 取消旧的，避免多个重型编译并行/缓存互相覆盖
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # 快速门禁：只解析，PR/每次 push 都跑（1-3 分钟）
   validate:
