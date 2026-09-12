@@ -16,6 +16,8 @@
 | 04 | [裁剪策略](04-trimming.md) | 已做/可做的精简项与重编影响 |
 | 05 | [GitHub Actions 编译](05-ci.md) | CI 结构、6h 上限与分次续跑、sstate 缓存 |
 | 06 | [环境与踩坑](06-gotchas.md) | 宿主环境、已知坑位、常用命令 |
+| 08 | [BitBake 速查](08-bitbake.md) | 命令、DEPENDS/RDEPENDS、sstate 签名、变量覆盖 |
+| 09 | [查依赖](09-dependencies.md) | 谁依赖了我的层 / 我依赖了谁 |
 
 ## 项目链接
 
