@@ -13,6 +13,7 @@ CORE_IMAGE_BASE_INSTALL += " \
     packagegroup-core-ssh-openssh \
     llama-cpp \
     llama-model-qwen \
+    llama-demo \
     "
 
 # ---- AI 计算包：确认 meta-tegra 实际包名后在这里追加 ----
