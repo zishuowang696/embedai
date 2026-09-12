@@ -16,9 +16,8 @@ CORE_IMAGE_BASE_INSTALL += " \
     llama-demo \
     "
 
-# ---- AI 计算包：确认 meta-tegra 实际包名后在这里追加 ----
-# 例如：
-#   tegra-libraries-cuda
+# ---- GPU 加速：llama-cpp 走 meta-tegra 的 cuda bbclass，已自动 RDEPENDS tegra-libraries-cuda ----
+# 如需额外 AI 计算包（确认 meta-tegra 实际包名后追加）：
 #   cudnn
 #   tensorrt-core
-#   ollama          (自建 recipe)
+#   cuda-cudart
