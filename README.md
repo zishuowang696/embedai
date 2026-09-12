@@ -4,10 +4,12 @@
 
 ## 项目定位
 
-基于 NVIDIA Jetson（Orin Nano DevKit NVMe）的 **AI 网关**：
+基于 NVIDIA Jetson（Orin Nano **Super** DevKit NVMe）的 **AI 网关**：
 - 精简系统：无 GUI / 无桌面栈，只留 SSH 管理入口
 - 自建 distro 与 image：`embedai` / `embedai-image`
 - 资源极限留给 AI：GPU/CUDA 计算能力保留，其余能省则省
+
+> 详细文档见 [docs/](docs/README.md)（分章节：硬件、KAS、内核、裁剪、CI、踩坑）。
 
 ## 构建方式：KAS
 
