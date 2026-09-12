@@ -11,6 +11,8 @@ IMAGE_FEATURES += "ssh-server-openssh"
 CORE_IMAGE_BASE_INSTALL += " \
     packagegroup-core-boot \
     packagegroup-core-ssh-openssh \
+    llama-cpp \
+    llama-model-qwen \
     "
 
 # ---- AI 计算包：确认 meta-tegra 实际包名后在这里追加 ----

@@ -1,0 +1,5 @@
+# llama-server 运行参数（systemd EnvironmentFile）
+LLAMA_HOST=0.0.0.0
+LLAMA_PORT=8080
+LLAMA_MODEL=/var/lib/llama/models/qwen2.5-0.5b-instruct-q2_k.gguf
+LLAMA_EXTRA_ARGS=-c 4096 -ngl 0
