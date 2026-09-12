@@ -1,5 +1,11 @@
 # EmbedAI — Jetson AI 网关
 
+[English](README.en.md) | 中文
+
+[![build](https://github.com/zishuowang696/embedai/actions/workflows/embedai.yml/badge.svg)](https://github.com/zishuowang696/embedai/actions/workflows/embedai.yml)
+![license](https://img.shields.io/badge/license-MIT-blue.svg)
+![platform](https://img.shields.io/badge/platform-Jetson%20Orin%20Nano%20Super-76b900.svg)
+
 裁剪 tegra，把资源极限留给 AI。
 
 ## 项目定位
