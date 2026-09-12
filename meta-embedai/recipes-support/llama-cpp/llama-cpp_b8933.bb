@@ -45,8 +45,8 @@ do_install() {
 }
 
 SYSTEMD_SERVICE:${PN} = "llama-server.service"
-# 默认不自动启动：等模型就位后再 systemctl enable/start，避免无模型时反复重启
-SYSTEMD_AUTO_ENABLE:${PN} = "disable"
+# 开箱即用：模型已内置，默认随系统自启
+SYSTEMD_AUTO_ENABLE:${PN} = "enable"
 
 FILES:${PN} += "\
     ${bindir}/llama-cli \
