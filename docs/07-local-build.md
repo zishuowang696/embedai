@@ -34,6 +34,25 @@ bitbake -k --runall=fetch embedai-image     # -k = keep going
 
 > 这一步可能跑几小时到一两天，建议挂着过夜、反复重跑直到不再有新下载。
 
+#### `--runall` 是什么
+
+普通 `bitbake embedai-image` 会跑目标的默认任务 `do_build`：调度器沿着任务依赖图，**边 fetch 边编译**（fetch 与 compile 交错并行），所以下载慢时整个构建都被拖住，也难判断卡在哪一步。
+
+`--runall=<task>` 的意思是：**对目标依赖树里的所有 recipe，只执行指定的这个任务**。于是：
+
+```
+bitbake --runall=fetch embedai-image
+# 等价于：对整棵依赖树里每个 recipe 跑 do_fetch，到此为止（不编译）
+```
+
+- 它仍然用正常的依赖解析，所以拉到的正是构建会用到的全部源码。
+- 因为只跑 fetch，任务之间几乎无依赖，可以最大化并行下载。
+- 已下载的会命中 `DL_DIR`，**可中断、可重跑**，反复执行直到不再有新下载。
+
+> 旧版 BitBake 的等价写法是 `bitbake -c fetchall <target>`（`fetchall` 是个老伪任务）。kirkstone 及以后推荐 `--runall=fetch`。
+>
+> 相关选项：`--runonly=<task>` 只跑该任务、不做依赖递归；`-k`（`--continue`）出错不中断。
+
 ### 阶段二：离线编译
 
 确认 fetch 完成后，禁止网络再跑构建，能立刻暴露"还缺哪个源"：
