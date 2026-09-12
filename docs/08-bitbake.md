@@ -75,8 +75,40 @@ kas shell kas.yml -c "bitbake -e embedai-image | grep -A3 '^DISTRO ='"
 
 ## 五、查找“谁依赖我 / 我依赖谁”
 
-- **recipe 级**：`bitbake -g <target>` → 看 `pn-buildlist` / `task-depends.dot`。
-- **层（layer）级（构建内）**：`bitbake-layers show-cross-depends` 列出层间依赖。
+### `bitbake -g <配方名>` 的方向问题
+
+`bitbake -g <配方名>` 把该配方当**目标**，算出它的**正向依赖闭包**，在当前目录生成：
+
+| 文件 | 内容 |
+|------|------|
+| `pn-buildlist` | 会参与构建的所有 recipe 平铺列表 |
+| `task-depends.dot` / `recipe-depends.dot` / `pn-depends.dot` | 任务/recipe/provider 级依赖图 |
+
+**边是“依赖者 → 被依赖者”**，例如 `"A.do_compile" -> "B.do_populate_sysroot"` 表示 A 依赖 B。
+
+```bash
+kas shell kas.yml -c "bitbake -g embedai-image"
+
+# 我依赖谁：看该配方的出边（正向）
+grep -E '^"zlib' build/recipe-depends.dot
+
+# 谁依赖我：反向 grep 指向我的边
+grep -E '\-> ".*zlib' build/recipe-depends.dot
+grep -n zlib build/pn-buildlist
+```
+
+**限制**：
+
+1. 只覆盖指定目标的依赖闭包；配方不在链上就不会出现。想查全，换覆盖范围更大的目标（`embedai-image` 一般最大）。
+2. 反映的是**构建/任务依赖**，`RDEPENDS`（运行期）不完整。
+3. 看不到**外部仓库/层**；那属于构建外，见 [09 · 查依赖](09-dependencies.md)。
+
+### 层级别
+
+```bash
+kas shell kas.yml -c "bitbake-layers show-cross-depends"   # 层与层之间的依赖（构建内）
+```
+
 - **外部谁依赖我的层**（构建外）：见 [09 · 查依赖](09-dependencies.md)。
 
 ## 六、本仓库的常见排查入口

@@ -3,19 +3,53 @@ name: embedai-build
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'local/**'
+      - '**/*.md'
+      - 'LICENSE'
+      - '.gitignore'
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - 'local/**'
+      - '**/*.md'
+      - 'LICENSE'
+      - '.gitignore'
   workflow_dispatch:
-
-# 同一分支只保留一个 run：新 push 取消旧的，避免多个重型编译并行/缓存互相覆盖
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    inputs:
+      force_cancel:
+        description: '先取消正在进行的构建，再重新构建'
+        type: boolean
+        default: false
 
 jobs:
-  # 快速门禁：只解析，PR/每次 push 都跑（1-3 分钟）
+  # 手动强制取消：独立 job、无并发组，不被 build 队列阻塞
+  cancel:
+    if: github.event_name == 'workflow_dispatch' && inputs.force_cancel
+    runs-on: ubuntu-22.04
+    permissions:
+      actions: write
+    steps:
+      - name: Cancel in-progress runs (except this one)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ids=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow embedai-build \
+                  --status in_progress --json databaseId --jq '.[].databaseId')
+          for id in $ids; do
+            if [ "$id" = "${GITHUB_RUN_ID}" ]; then continue; fi
+            echo "cancelling run $id"
+            gh run cancel "$id" --repo "$GITHUB_REPOSITORY" || true
+          done
+
+  # 快速门禁：只解析（1-3 分钟）。并发组独立，可取消旧的 validate，但不影响 build
   validate:
     runs-on: ubuntu-22.04
     timeout-minutes: 30
+    concurrency:
+      group: embedai-validate-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
 
@@ -73,11 +107,15 @@ jobs:
           key: ${{ steps.cache-key.outputs.key }}
 
   # 完整编译：public 仓库 -> 4 核 16GB runner，靠 free-disk-space + sstate 缓存
+  # 默认排队不取消（cancel-in-progress: false）：新 push 等当前构建结束再跑，不丢进度
   build:
     needs: validate
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-22.04
     timeout-minutes: 350
+    concurrency:
+      group: embedai-build-${{ github.ref }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 
