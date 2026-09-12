@@ -49,9 +49,18 @@ bitbake --runall=fetch embedai-image
 - 因为只跑 fetch，任务之间几乎无依赖，可以最大化并行下载。
 - 已下载的会命中 `DL_DIR`，**可中断、可重跑**，反复执行直到不再有新下载。
 
-> 旧版 BitBake 的等价写法是 `bitbake -c fetchall <target>`（`fetchall` 是个老伪任务）。kirkstone 及以后推荐 `--runall=fetch`。
+> **`--runall=fetch` 与 `-c fetchall` 的区别**
 >
-> 相关选项：`--runonly=<task>` 只跑该任务、不做依赖递归；`-k`（`--continue`）出错不中断。
+> - `-c fetchall` 跑的是一个叫 `do_fetchall` 的**伪任务**，它靠 `[recrdeptask] = "do_fetch"` 递归触发依赖项的 `do_fetch`。该任务定义在早期 OE-Core 的 `base.bbclass`：
+>   ```bitbake
+>   addtask fetchall after do_fetch
+>   do_fetchall[recrdeptask] = "do_fetch"
+>   ```
+>   但**当前 OE-Core 的 `base.bbclass` 已不再定义它**，所以在 kirkstone/scarthgap 等新版本上 `-c fetchall` 属遗留用法（可能直接报 "No such task"）。
+> - `--runall=fetch` 是 **BitBake 调度器级选项**：直接对目标 task graph 里的每个 recipe 运行 `do_fetch`，不依赖那个伪任务，覆盖更完整、行为更明确。
+> - 两者都是**只下载、不编译**，且可中断重跑；新版本统一用 `--runall=fetch`。
+>
+> 相关选项：`--runonly=<task>` 只跑指定任务且不做依赖递归；`-k`（`--continue`）出错不中断。
 
 ### 阶段二：离线编译
 
