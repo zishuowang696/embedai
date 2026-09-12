@@ -10,3 +10,9 @@
 # 构建产物
 /build/
 kas.lock
+
+# 本地私有内容（计划/笔记等，不进版本库）
+/local/
+
+# Obsidian vault 配置目录
+**/.obsidian/
