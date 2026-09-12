@@ -51,6 +51,8 @@ kas dump kas.yml          # 查看最终展开配置
 
 首次构建生成 `kas.lock` 固定各仓库版本。
 
+> **国内首次构建慢？** 先把下载和编译拆开：`bitbake --runall=fetch embedai-image` 只拉源码（可中断重跑），完成后再 `kas build`。详见 [docs/07-local-build.md](docs/07-local-build.md)。
+
 ### 复用旧构建缓存（零复制，只读镜像）
 
 旧构建（`tegra-demo-distro/build/`）的产物可直接当只读源复用，磁盘不够时不用复制：
