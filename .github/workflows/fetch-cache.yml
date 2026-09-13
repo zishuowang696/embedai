@@ -1,0 +1,81 @@
+name: fetch-cache
+
+# 让 GitHub runner（不受墙影响）把 Yocto 源码全部 fetch 下来，
+# 打包成 <2GiB 分卷，上传到本仓库的 Release（tag: dl-cache）。
+# 本地用 scripts/pull-dl-cache.sh 拉回，放进 DL_DIR 后即可离线构建。
+# 说明：不使用 Actions cache（每仓库 10GB 上限），只用 Release assets（总大小/带宽不限）。
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - name: Show disk
+        run: df -h /
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq chrpath diffstat python3-websockets
+          python -m pip install kas==5.3
+
+      - name: Generate CI kas config (neutralize host paths)
+        run: |
+          sed -e 's|DL_DIR ?= "/home/admin/tegra/tegra-demo-distro/build/downloads"|DL_DIR ?= "${TOPDIR}/downloads"|' \
+              -e 's|SSTATE_MIRRORS = "file://.\* file:///home/admin/tegra/tegra-demo-distro/build/sstate-cache/PATH"|SSTATE_MIRRORS = ""|' \
+              kas.yml > kas-ci.yml
+          grep -E 'DL_DIR|SSTATE_MIRRORS' kas-ci.yml
+
+      - name: kas checkout (retry)
+        run: |
+          for i in 1 2 3; do
+            if kas checkout kas-ci.yml; then break; fi
+            echo "attempt $i failed, retry in 15s"; sleep 15
+          done
+
+      - name: Fetch all sources only (no compile)
+        run: |
+          set +e
+          kas shell kas-ci.yml -c "bitbake -k --runall=fetch embedai-image"
+          echo "fetch exit: $? （-k 会尽量多下，个别失败不阻塞）"
+          set -e
+          df -h /
+
+      - name: Package downloads into <2GiB parts
+        run: |
+          cd build
+          tar --exclude='*.tmp' --exclude='*.lock' -cf - downloads \
+            | split -b 1900M - dl-cache.part-
+          sha256sum dl-cache.part-* > SHA256SUMS
+          echo "parts: $(ls dl-cache.part-* | wc -l)"
+          ls -lh dl-cache.part-* | tail -3
+
+      - name: Publish to Release (dl-cache)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete dl-cache --yes --cleanup-tag 2>/dev/null || true
+          gh release create dl-cache \
+            --title "Yocto DL_DIR cache" \
+            --notes "embedai 全量下载缓存（分卷，<2GiB/个）。本地：scripts/pull-dl-cache.sh 拉回后解压进 DL_DIR，即可离线构建。" \
+            --prerelease
+          gh release upload dl-cache build/dl-cache.part-* build/SHA256SUMS --clobber
