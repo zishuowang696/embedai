@@ -41,6 +41,23 @@ curl -L -C - -O "https://ghproxy.net/https://github.com/..."
 curl -Z --parallel-max 6 -L -C - --config dl.curlconf
 ```
 
+## 自己测速（重要）
+
+镜像质量随时间变化，**批量下载前先测**：
+
+```bash
+# 默认测 embedai 的 dl-cache 分卷、取 20MB、对比内置的几个镜像
+scripts/speedtest-github.sh
+
+# 指定 URL / 大小
+scripts/speedtest-github.sh https://github.com/<owner>/<repo>/releases/download/<tag>/<file> 20
+
+# 自定义镜像列表
+MIRRORS="https://ghproxy.net https://gh-proxy.com" scripts/speedtest-github.sh
+```
+
+脚本对每个源取相同字节数、打印实际 MB/s（单连接），据此挑最快的。
+
 ## 下载本项目的构建缓存
 
 `scripts/pull-dl-cache.sh` 已支持镜像前缀与断点续传：

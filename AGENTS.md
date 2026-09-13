@@ -28,3 +28,11 @@ Yocto/OpenEmbedded build for a trimmed NVIDIA Jetson (Orin Nano DevKit NVMe) "AI
 - `kas.yml` `local_conf_header` hardcodes host-specific absolute paths: `DL_DIR` and `SSTATE_MIRRORS` point at `/home/admin/tegra/tegra-demo-distro/build/`, a prior full build reused as a read-only cache. Only valid on this machine and only hits when upstream SHAs match.
 - `INHERIT += "rm_work"` deletes per-recipe work dirs; `BB_DISKMON_DIRS` halts builds on low disk. ~60G+ free is expected.
 - AI packages (cudnn, tensorrt-core, tegra-libraries-cuda, …) are intentionally commented out in `embedai-image.bb`; confirm real package names in meta-tegra before enabling.
+
+## Network & download (China / GFW)
+- Direct GitHub and many upstream hosts are unreliable from CN. **Measure before bulk downloading** — don't guess.
+- Speed test (single connection, 20MB range): `scripts/speedtest-github.sh [URL] [MB]`. Known-good proxies as of 2026-09: `https://ghproxy.net` (~1.2 MB/s), `https://gh-proxy.com` (~0.7), `https://ghfast.top` (~0.2). Many others are dead. Single-connection speed multiplies with parallel connections (~6x at 6-way).
+- Pull the prebuilt download cache with `scripts/pull-dl-cache.sh`; it supports `EMBEDAI_MIRROR=<proxy>`, 6-way parallel and resume (`curl -Z -C -`), then `sha256sum -c`. Default stage dir must be on the same filesystem as the destination (`/` is small on this host; use `/home`).
+- Yocto source fetches: prefer **bitbake mirrors** over proxying GitHub — e.g. `KERNELORG_MIRROR` → USTC (`https://mirrors.ustc.edu.cn/kernel.org`), huggingface → `hf-mirror.com` (`PREMIRRORS:prepend`). See `docs/07-local-build.md` and `docs/10-github-mirrors.md`.
+- Release-cache design: `fetch-cache.yml` runs `bitbake --runall=fetch` on a GitHub runner (unblocked network), tars `downloads/` into `<2GiB` parts and uploads them to the `dl-cache` release. This deliberately avoids Actions cache (10GB/repo limit); Release assets have no total/bandwidth limit. Local pull → `BB_NO_NETWORK=1 kas build kas.yml`.
+- When adding a mirror/proxy or a new download path, **record the measured speed and date** in `docs/10-github-mirrors.md`.
