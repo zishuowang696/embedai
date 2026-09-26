@@ -17,7 +17,7 @@ on:
       - 'meta-embedai/recipes-core/images/embedai-qemu-image.bb'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-and-boot:
@@ -85,6 +85,27 @@ jobs:
         with:
           path: build/sstate-cache
           key: qemu-sstate-${{ github.run_id }}
+
+      # 发布到 Release（永久可下；artifact 会过期）
+      - name: Publish to Release (image-latest)
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          gh release view image-latest >/dev/null 2>&1 || \
+            gh release create image-latest \
+              --title "embedai images (rolling)" \
+              --notes "Rolling built images: Jetson Orin Nano (\`embedai-image\`) + QEMU aarch64 (\`embedai-qemu-image\`). Assets are replaced on each build." \
+              --prerelease
+          files=$(find -L build/tmp/deploy/images/qemuarm64-embedai -maxdepth 1 -type f -name 'embedai-qemu-image-*')
+          if [ -n "$files" ]; then
+            gh release upload image-latest $files --clobber
+            echo "uploaded:"; echo "$files"
+          else
+            echo "no qemu image files found"
+          fi
 
       - name: Boot smoke test (runqemu, timeboxed)
         run: |

@@ -113,6 +113,8 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-22.04
     timeout-minutes: 350
+    permissions:
+      contents: write
     concurrency:
       group: embedai-build-${{ github.ref }}
       cancel-in-progress: false
@@ -202,3 +204,24 @@ jobs:
           path: build/tmp/deploy/images/jetson-orin-nano-devkit-nvme/embedai-image-*
           if-no-files-found: warn
           retention-days: 30
+
+      # 发布到 Release（永久可下；artifact 会过期）
+      - name: Publish to Release (image-latest)
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          gh release view image-latest >/dev/null 2>&1 || \
+            gh release create image-latest \
+              --title "embedai images (rolling)" \
+              --notes "Rolling built images: Jetson Orin Nano (\`embedai-image\`) + QEMU aarch64 (\`embedai-qemu-image\`). Assets are replaced on each build." \
+              --prerelease
+          files=$(find -L build/tmp/deploy/images/jetson-orin-nano-devkit-nvme -maxdepth 1 -type f -name 'embedai-image-*')
+          if [ -n "$files" ]; then
+            gh release upload image-latest $files --clobber
+            echo "uploaded:"; echo "$files"
+          else
+            echo "no image files found"
+          fi
