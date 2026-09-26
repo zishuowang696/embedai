@@ -61,7 +61,7 @@ kas dump kas.yml          # 查看最终展开配置
 
 ```bash
 kas build kas.yml:kas-qemu.yml
-kas shell kas.yml:kas-qemu.yml -c "runqemu qemuarm64-embedai nographic"
+kas shell kas.yml:kas-qemu.yml -c "runqemu qemuarm64 nographic"
 ```
 
 详见 [docs/11-qemu.md](docs/11-qemu.md)。

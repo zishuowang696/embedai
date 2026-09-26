@@ -74,7 +74,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: embedai-qemu-image-aarch64
-          path: build/tmp/deploy/images/qemuarm64-embedai/embedai-qemu-image-*
+          path: build/tmp/deploy/images/qemuarm64/embedai-qemu-image-*
           if-no-files-found: warn
           retention-days: 14
 
@@ -99,7 +99,7 @@ jobs:
               --title "embedai images (rolling)" \
               --notes "Rolling built images: Jetson Orin Nano (\`embedai-image\`) + QEMU aarch64 (\`embedai-qemu-image\`). Assets are replaced on each build." \
               --prerelease
-          files=$(find -L build/tmp/deploy/images/qemuarm64-embedai -maxdepth 1 -type f -name 'embedai-qemu-image-*')
+          files=$(find -L build/tmp/deploy/images/qemuarm64 -maxdepth 1 -type f -name 'embedai-qemu-image-*')
           if [ -n "$files" ]; then
             gh release upload image-latest $files --clobber
             echo "uploaded:"; echo "$files"
@@ -110,7 +110,7 @@ jobs:
       - name: Boot smoke test (runqemu, timeboxed)
         run: |
           set +e
-          timeout 420 kas shell kas-ci.yml:kas-qemu.yml -c "runqemu qemuarm64-embedai nographic" > boot.log 2>&1
+          timeout 420 kas shell kas-ci.yml:kas-qemu.yml -c "runqemu qemuarm64 nographic" > boot.log 2>&1
           echo "runqemu exit: $?"
           set -e
           echo "===== boot.log (tail) ====="

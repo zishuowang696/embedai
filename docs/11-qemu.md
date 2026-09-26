@@ -16,7 +16,7 @@
 
 ## 机器与镜像
 
-- 机器：`qemuarm64-embedai`（`meta-embedai/conf/machine/qemuarm64-embedai.conf`，`require` 上游 `qemuarm64.conf`）
+- 机器：**上游标准 `qemuarm64`**（OE-Core 自带，内核 BSP / `COMPATIBLE_MACHINE` / `qemuboot` 开箱即用；不自造机器名，避免一系列兼容问题）
 - 镜像：`embedai-qemu-image`（复用 `core-image-minimal` + SSH，**不含** llama/CUDA/TensorRT）
 - 叠加配置：`kas-qemu.yml`（只覆盖 `machine` 与 `target`，复用 `kas.yml` 的全部层）
 
@@ -27,7 +27,7 @@
 kas build kas.yml:kas-qemu.yml
 
 # 启动并进串口控制台
-kas shell kas.yml:kas-qemu.yml -c "runqemu qemuarm64-embedai nographic"
+kas shell kas.yml:kas-qemu.yml -c "runqemu qemuarm64 nographic"
 ```
 
 登录：`core-image-minimal` 默认带 `debug-tweaks`，**root 空密码**——仅用于本地/CI 验证，勿用于生产。

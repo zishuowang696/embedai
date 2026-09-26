@@ -31,8 +31,8 @@ EmbedAI — a **hardware-centric** edge AI distro: get AI models running **stabl
 
 ## Virtual board (QEMU)
 - `kas-qemu.yml` overlays `kas.yml` (overrides only `machine` + `target`) to build a **virtual aarch64 board** with no Jetson hardware: `kas build kas.yml:kas-qemu.yml`.
-- Machine: `meta-embedai/conf/machine/qemuarm64-embedai.conf` (requires upstream `qemuarm64.conf`); Image: `meta-embedai/recipes-core/images/embedai-qemu-image.bb` (reuses `core-image-minimal` + ssh; deliberately **no** llama-cpp/CUDA/TensorRT).
-- Boot smoke: `kas shell kas.yml:kas-qemu.yml -c "runqemu qemuarm64-embedai nographic"`; CI job: `.github/workflows/qemu-smoke.yml`.
+- Machine: upstream standard `qemuarm64` (OE-Core; do **not** invent a custom machine name — it breaks `COMPATIBLE_MACHINE`/kernel BSP lookup). Image: `meta-embedai/recipes-core/images/embedai-qemu-image.bb` (reuses `core-image-minimal` + ssh; deliberately **no** llama-cpp/CUDA/TensorRT).
+- Boot smoke: `kas shell kas.yml:kas-qemu.yml -c "runqemu qemuarm64 nographic"`; CI job: `.github/workflows/qemu-smoke.yml`.
 - Scope: QEMU has **no Jetson GPU/NPU** — validates distro boot/systemd/network only, not AI/CUDA. Uses TCG on x86 runners (slow boot, not for perf tests).
 
 ## Network & download (China / GFW)
