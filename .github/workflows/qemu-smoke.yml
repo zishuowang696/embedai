@@ -53,6 +53,16 @@ jobs:
               kas.yml > kas-ci.yml
           grep -E 'DL_DIR|SSTATE_MIRRORS' kas-ci.yml
 
+      # 复用真机构建缓存的 sstate（同为 aarch64 工具链），大幅加速后续 qemu 构建
+      - name: Restore sstate (reuse embedai-build cache)
+        uses: actions/cache/restore@v4
+        with:
+          path: build/sstate-cache
+          key: qemu-sstate-${{ github.run_id }}
+          restore-keys: |
+            embedai-sstate-
+            qemu-sstate-
+
       - name: kas checkout
         run: kas checkout kas-ci.yml:kas-qemu.yml
 
@@ -67,6 +77,14 @@ jobs:
           path: build/tmp/deploy/images/qemuarm64-embedai/embedai-qemu-image-*
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Save qemu sstate
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: build/sstate-cache
+          key: qemu-sstate-${{ github.run_id }}
 
       - name: Boot smoke test (runqemu, timeboxed)
         run: |
