@@ -22,6 +22,7 @@
 | 10 | [GitHub 下载加速与镜像测速](10-github-mirrors.md) | 国内代理前缀、实测速度、缓存拉取 |
 | 11 | [虚拟开发板：QEMU 上跑 embedai](11-qemu.md) | 无需 Jetson，构建 + 启动冒烟（aarch64） |
 | 12 | [定位：面向 AI 模型部署的嵌入式发行版](12-positioning.md) | 一句话定位、差异化、产品 backlog、范围取舍 |
+| 13 | [开源同类与空位](13-landscape.md) | 竞品/相邻项目对比、差异化、内容切入点 |
 
 ## 项目链接
 
