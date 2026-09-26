@@ -1,4 +1,4 @@
-# EmbedAI — Jetson AI Gateway
+# EmbedAI — an Embedded Distro for Edge AI
 
 [中文](README.md) | English
 
@@ -6,17 +6,18 @@
 ![license](https://img.shields.io/badge/license-MIT-blue.svg)
 ![platform](https://img.shields.io/badge/platform-Jetson%20Orin%20Nano%20Super-76b900.svg)
 
-Trimmed Tegra, leaving the maximum resources to AI.
+Trimmed Tegra, maximum resources reserved for AI — **build the image, drop in your model, ship it**.
 
 ## What this is
 
-An **AI gateway** built on NVIDIA Jetson (Orin Nano **Super** DevKit, NVMe):
+A **minimal, reproducible embedded Linux distribution focused on deploying AI models** (current target hardware: NVIDIA Jetson Orin Nano **Super** DevKit, NVMe):
 
 - **Minimal system**: no GUI, no desktop stack — only SSH for management.
 - **Custom distro & image**: `embedai` / `embedai-image`.
 - **Resources reserved for AI**: GPU/CUDA compute kept, everything else trimmed.
+- **Model-first**: the goal is to make models deployable, stable and updatable on the device (see [docs/12-positioning.md](docs/12-positioning.md)).
 
-> Full documentation lives in [docs/](docs/README.md) (hardware, KAS, kernel, trimming, CI, gotchas).
+> Full documentation lives in [docs/](docs/README.md) (hardware, KAS, kernel, trimming, CI, virtual board, download acceleration, positioning).
 
 ## Build system: KAS
 

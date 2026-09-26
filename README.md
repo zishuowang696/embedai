@@ -1,4 +1,4 @@
-# EmbedAI — Jetson AI 网关
+# EmbedAI — 边缘 AI 的嵌入式发行版
 
 [English](README.en.md) | 中文
 
@@ -6,16 +6,18 @@
 ![license](https://img.shields.io/badge/license-MIT-blue.svg)
 ![platform](https://img.shields.io/badge/platform-Jetson%20Orin%20Nano%20Super-76b900.svg)
 
-裁剪 tegra，把资源极限留给 AI。
+裁剪 tegra，把资源极限留给 AI：**构建镜像 → 放入模型 → 交付上线**。
 
 ## 项目定位
 
-基于 NVIDIA Jetson（Orin Nano **Super** DevKit NVMe）的 **AI 网关**：
+一个**精简、可复现、面向「AI 模型部署」的嵌入式 Linux 发行版**（当前目标硬件为 NVIDIA Jetson Orin Nano **Super** DevKit NVMe）：
+
 - 精简系统：无 GUI / 无桌面栈，只留 SSH 管理入口
 - 自建 distro 与 image：`embedai` / `embedai-image`
 - 资源极限留给 AI：GPU/CUDA 计算能力保留，其余能省则省
+- 模型优先：目标是解决"模型能上板、能稳、能更新"（见 [docs/12-positioning.md](docs/12-positioning.md)）
 
-> 详细文档见 [docs/](docs/README.md)（分章节：硬件、KAS、内核、裁剪、CI、踩坑）。
+> 详细文档见 [docs/](docs/README.md)（分章节：硬件、KAS、内核、裁剪、CI、虚拟板、下载加速、定位）。
 
 ## 构建方式：KAS
 

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Yocto/OpenEmbedded build for a trimmed NVIDIA Jetson (Orin Nano DevKit NVMe) "AI gateway" image, managed with **KAS**. All interaction goes through `kas ... kas.yml`; there is no docker, builds run on the host (x86_64 Ubuntu, Python 3.10). The project README (Chinese) is accurate — read it for background.
+EmbedAI — a minimal, reproducible embedded Linux distro focused on **deploying AI models at the edge** (positioning: `docs/12-positioning.md`). Current target hardware: NVIDIA Jetson Orin Nano DevKit NVMe. The Yocto/OpenEmbedded build is managed with **KAS**. All interaction goes through `kas ... kas.yml`; there is no docker, builds run on the host (x86_64 Ubuntu, Python 3.10). The project README (Chinese) is accurate — read it for background.
 
 ## Commands (from repo root)
 - `kas build kas.yml` — build the `embedai-image` target
