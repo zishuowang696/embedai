@@ -1,43 +1,46 @@
-# 定位：面向「AI 模型部署」的嵌入式 Linux 发行版
+# 定位：以硬件为核心，让 AI 模型在设备上稳定、高性能地运行
 
 ## 一句话
-EmbedAI 是一个**精简、可复现的嵌入式 Linux 发行版**，目标是**把训练好的 AI 模型可靠地部署到边缘设备**：构建镜像 → 放入模型 → 交付上线。
+EmbedAI 的核心是**硬件**：围绕特定边缘板卡（首个目标：NVIDIA Jetson Orin Nano），把一个 AI 模型**稳定、高性能**地跑起来——发行版/系统只是达成这个目标的载体与手段。
 
-## 判断：方向对，但"嵌入式 AI 发行版"太宽
-- 通用 BSP / NVIDIA JetPack 解决的是"系统能跑起来"；EmbedAI 要解决的是"**模型能上、能稳、能更新**"。
-- 真正的价值在 **模型 → 设备** 这条流水线，发行版只是底座。对外可以叫"发行版"，对内要把产品定义成**部署层**。
+## 为什么是"硬件为核心"
+- 模型能不能跑好，取决于**整条硬件栈**：GPU/NPU、内存带宽、驱动、CUDA/TensorRT 版本、内核、散热、供电。
+- 通用 BSP / NVIDIA JetPack 只保证"系统能起来"，不保证"**你的模型在这块板上稳且快**"。
+- 所以我们做的不是"又一个发行版"，而是**为具体板卡 + 具体模型负载做整栈调优与保障**。
 
-## 与现有方案的差异
+## 目标（可度量）
+| 目标 | 含义 | 手段 |
+| --- | --- | --- |
+| **稳定** | 长时间运行不崩、可预测 | soak test、内存/温度/降频监控、看门狗、定版驱动 |
+| **高性能** | 延迟/吞吐达标 | TensorRT engine 生成与量化、batch/内存复用、GPU 调优 |
+| **可复现** | 换机器/CI 结果一致 | KAS 锁定内核/驱动/CUDA 版本 |
+| **可更新** | 升级不砖 | A/B OTA |
+| **可移植（后续）** | 方法复用到第二块板 | 运行时抽象 + 少量目标 |
+
+## 差异化
 | 方案 | 它解决什么 | EmbedAI 的不同 |
 | --- | --- | --- |
-| NVIDIA JetPack | Jetson 系统 + 驱动 + CUDA | 更精简、KAS 锁版本可复现、模型优先、思路可跨板 |
-| Foundries.io（Linux microPlatform） | 边缘 Linux + OTA | 开源可自托管、聚焦模型部署流水线 |
-| Edge Impulse | 训练/MLOps 侧 | 提供完整系统 + 部署层，而非只做训练 |
-| 厂商 BSP | 单板可用 | 统一工作流，降低换板成本 |
+| NVIDIA JetPack | 系统 + 驱动 + CUDA | 为**具体模型负载**做整栈调优，并对**稳定/性能**负责 |
+| 厂商 BSP | 单板能跑 | 关注"模型跑得稳、跑得快、升级不砖" |
+| Edge Impulse / MLOps | 训练侧 | 落点在**设备侧硬件栈** |
 
-## 产品应该长什么样（backlog）
-1. **精简可复现底座**：KAS 管理、最小镜像（已在做）。
-2. **模型部署流水线（核心）**：
-   - `embedai-deploy`：输入 ONNX / GGUF / TFLite → 编译成目标运行时（TensorRT / RKNN / ONNXRuntime）→ 生成 systemd 服务；
-   - 运行时抽象：同一模型在 Jetson 与其它 NPU 上用统一接口。
-3. **可复现 + OTA**：A/B 升级、不砖。
-4. **基准与可观测**：延迟 / 内存 / 功耗 / 精度 的标准化测量（也是内容素材）。
-5. **CI**：镜像构建 + 启动冒烟（真机 + 虚拟板 QEMU）。
+## 产品 backlog（以硬件为核心）
+1. **板级底座**：最小镜像 + 定版内核/驱动/CUDA（KAS 锁）。
+2. **模型运行时调优**：TensorRT engine 生成 / 量化 / benchmark，并固化进镜像。
+3. **稳定性保障**：soak test、温度/功耗/降频监控、看门狗。
+4. **更新**：A/B OTA，不砖。
+5. **基准报告**：每个模型 × 每块板的标准指标（延迟 / 内存 / 功耗 / 精度）。
+6. **CI**：镜像构建 + 真机/虚拟板启动冒烟。
 
 ## 范围（关键取舍）
-- 先**只做 Jetson（TensorRT）**，把"模型 → 设备"做到极致；
-- 再用**一个**第二目标（如 RK3588/RKNN，或 QEMU 虚拟板）证明**可移植**，不要一开始铺很多板子；
-- "支持越多板子"是陷阱：多样性的维护成本会吃掉所有时间。
+- 先把 **Jetson Orin Nano + TensorRT** 一块板、一个运行时做透；
+- 第二块板（如 RK3588 / RKNN）只用来证明**方法可移植**，不铺开；
+- "支持很多板子"是陷阱：硬件多样性会吃掉所有时间。
 
 ## 客户与内容
-- 客户：硬件/AI 创业公司、边缘 AI 产品团队、系统集成商（"我的模型上不了板/不稳/不能升级"）。
-- 内容主线：**「从模型到设备」**——ONNX → TensorRT → systemd → OTA → 基准，和视频计划打通（GitHub/YouTube/抖音）。
-
-## 风险
-- JetPack 已覆盖不少 → 必须在**精简、可复现、跨板、部署流水线**上做出明确增量；
-- 硬件多样性的成本 → 用运行时抽象 + 少量目标控制；
-- "发行版"听起来偏底层 → 对外表达为 **"edge AI deployment platform built on a minimal Linux distro"**。
+- **客户**：需要"我的模型在这块板上稳、快、能升级"的团队（硬件/AI 创业、边缘产品、系统集成商）。
+- **内容主线：「模型上板」**——把某个模型在 Orin Nano 上跑到稳定高性能的**全过程与真实数据**（数据即证据）。
 
 ## 对外一句话
-- **EN**：Build the image, drop in your model, ship it — a minimal, reproducible embedded Linux distro for deploying AI models at the edge.
-- **ZH**：构建镜像、放入模型、交付上线 —— 一个精简、可复现、面向边缘 AI 模型部署的嵌入式 Linux 发行版。
+- **EN**：Stable, high-performance AI on the hardware — a board-tuned, reproducible Linux distro that gets your model running (and keeps it running) at the edge.
+- **ZH**：让 AI 模型在硬件上稳定、高性能地跑起来（并一直跑下去）——为板卡整栈调优的、可复现的 Linux 发行版。

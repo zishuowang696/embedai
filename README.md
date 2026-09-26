@@ -6,16 +6,16 @@
 ![license](https://img.shields.io/badge/license-MIT-blue.svg)
 ![platform](https://img.shields.io/badge/platform-Jetson%20Orin%20Nano%20Super-76b900.svg)
 
-裁剪 tegra，把资源极限留给 AI：**构建镜像 → 放入模型 → 交付上线**。
+以硬件为核心：让 AI 模型在板卡上**稳定、高性能**地跑起来。
 
 ## 项目定位
 
-一个**精简、可复现、面向「AI 模型部署」的嵌入式 Linux 发行版**（当前目标硬件为 NVIDIA Jetson Orin Nano **Super** DevKit NVMe）：
+以**硬件为核心**的边缘 AI 发行版：围绕特定板卡（当前为 NVIDIA Jetson Orin Nano **Super** DevKit NVMe）对整条硬件栈做调优，目标是让模型**稳定、高性能**地运行（见 [docs/12-positioning.md](docs/12-positioning.md)）。
 
 - 精简系统：无 GUI / 无桌面栈，只留 SSH 管理入口
 - 自建 distro 与 image：`embedai` / `embedai-image`
-- 资源极限留给 AI：GPU/CUDA 计算能力保留，其余能省则省
-- 模型优先：目标是解决"模型能上板、能稳、能更新"（见 [docs/12-positioning.md](docs/12-positioning.md)）
+- 资源极限留给 AI：GPU/CUDA 计算能力保留，其余能省则省，把资源留给模型
+- 整栈定版：内核 / 驱动 / CUDA 版本经 KAS 锁定，换机器与 CI 结果一致
 
 > 详细文档见 [docs/](docs/README.md)（分章节：硬件、KAS、内核、裁剪、CI、虚拟板、下载加速、定位）。
 

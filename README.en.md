@@ -6,16 +6,16 @@
 ![license](https://img.shields.io/badge/license-MIT-blue.svg)
 ![platform](https://img.shields.io/badge/platform-Jetson%20Orin%20Nano%20Super-76b900.svg)
 
-Trimmed Tegra, maximum resources reserved for AI — **build the image, drop in your model, ship it**.
+Hardware first: get AI models running **stably and fast** on the board.
 
 ## What this is
 
-A **minimal, reproducible embedded Linux distribution focused on deploying AI models** (current target hardware: NVIDIA Jetson Orin Nano **Super** DevKit, NVMe):
+A **hardware-centric** edge AI distro: we tune the whole stack for a specific board (currently NVIDIA Jetson Orin Nano **Super** DevKit, NVMe) so models run **stably and with high performance** (see [docs/12-positioning.md](docs/12-positioning.md)).
 
 - **Minimal system**: no GUI, no desktop stack — only SSH for management.
 - **Custom distro & image**: `embedai` / `embedai-image`.
 - **Resources reserved for AI**: GPU/CUDA compute kept, everything else trimmed.
-- **Model-first**: the goal is to make models deployable, stable and updatable on the device (see [docs/12-positioning.md](docs/12-positioning.md)).
+- **Pinned stack**: kernel / drivers / CUDA versions locked via KAS — identical on any machine and in CI.
 
 > Full documentation lives in [docs/](docs/README.md) (hardware, KAS, kernel, trimming, CI, virtual board, download acceleration, positioning).
 
