@@ -1,0 +1,9 @@
+header:
+  version: 22
+
+# embedai 虚拟开发板（QEMU ARM64，无 GPU/NPU）。
+# 用法：  kas build kas.yml:kas-qemu.yml
+# 说明：  复用 kas.yml 的全部上层仓库/层定义，只覆盖 machine 与 target。
+machine: qemuarm64-embedai
+target:
+  - embedai-qemu-image

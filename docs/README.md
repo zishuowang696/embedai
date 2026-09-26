@@ -20,6 +20,7 @@
 | 08 | [BitBake 速查](08-bitbake.md) | 命令、DEPENDS/RDEPENDS、sstate 签名、变量覆盖 |
 | 09 | [查依赖](09-dependencies.md) | 谁依赖了我的层 / 我依赖了谁 |
 | 10 | [GitHub 下载加速与镜像测速](10-github-mirrors.md) | 国内代理前缀、实测速度、缓存拉取 |
+| 11 | [虚拟开发板：QEMU 上跑 embedai](11-qemu.md) | 无需 Jetson，构建 + 启动冒烟（aarch64） |
 
 ## 项目链接
 

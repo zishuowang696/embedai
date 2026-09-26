@@ -1,0 +1,85 @@
+name: qemu-smoke
+
+# 虚拟开发板：构建 qemuarm64 精简镜像并做一次启动冒烟（无需 Jetson 硬件）。
+# 用 GitHub runner 的网络（不受墙影响）构建，验证发行版在 aarch64 虚拟板上能起来。
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'kas-qemu.yml'
+      - 'meta-embedai/conf/machine/**'
+      - 'meta-embedai/recipes-core/images/embedai-qemu-image.bb'
+      - '.github/workflows/qemu-smoke.yml'
+  pull_request:
+    paths:
+      - 'kas-qemu.yml'
+      - 'meta-embedai/conf/machine/**'
+      - 'meta-embedai/recipes-core/images/embedai-qemu-image.bb'
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-boot:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - name: Show disk
+        run: df -h /
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq chrpath diffstat python3-websockets qemu-system-arm
+          python -m pip install kas==5.3
+
+      - name: Generate CI kas config (neutralize host paths)
+        run: |
+          sed -e 's|DL_DIR ?= "/home/admin/tegra/tegra-demo-distro/build/downloads"|DL_DIR ?= "${TOPDIR}/downloads"|' \
+              -e 's|SSTATE_MIRRORS = "file://.\* file:///home/admin/tegra/tegra-demo-distro/build/sstate-cache/PATH"|SSTATE_MIRRORS = ""|' \
+              kas.yml > kas-ci.yml
+          grep -E 'DL_DIR|SSTATE_MIRRORS' kas-ci.yml
+
+      - name: kas checkout
+        run: kas checkout kas-ci.yml:kas-qemu.yml
+
+      - name: Build embedai-qemu-image (aarch64)
+        run: kas build kas-ci.yml:kas-qemu.yml
+
+      - name: Upload image artifacts
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: embedai-qemu-image-aarch64
+          path: build/tmp/deploy/images/qemuarm64-embedai/embedai-qemu-image-*
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Boot smoke test (runqemu, timeboxed)
+        run: |
+          set +e
+          timeout 420 kas shell kas-ci.yml:kas-qemu.yml -c "runqemu qemuarm64-embedai nographic" > boot.log 2>&1
+          echo "runqemu exit: $?"
+          set -e
+          echo "===== boot.log (tail) ====="
+          tail -50 boot.log
+          echo "==========================="
+          if grep -qE "login:|Startup finished|systemd\[1\]: Reached" boot.log; then
+            echo "QEMU_BOOT_OK"
+          else
+            echo "QEMU_BOOT_CHECK_FAILED"
+            exit 1
+          fi

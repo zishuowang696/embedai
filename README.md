@@ -53,6 +53,17 @@ kas dump kas.yml          # 查看最终展开配置
 
 > **国内首次构建慢？** 先把下载和编译拆开：`bitbake --runall=fetch embedai-image` 只拉源码（可中断重跑），完成后再 `kas build`。详见 [docs/07-local-build.md](docs/07-local-build.md)。
 
+### 虚拟开发板（QEMU，无需 Jetson）
+
+没有硬件也能验证发行版（启动/systemd/网络；**无 GPU/CUDA/TensorRT**）：
+
+```bash
+kas build kas.yml:kas-qemu.yml
+kas shell kas.yml:kas-qemu.yml -c "runqemu qemuarm64-embedai nographic"
+```
+
+详见 [docs/11-qemu.md](docs/11-qemu.md)。
+
 ### 复用旧构建缓存（零复制，只读镜像）
 
 旧构建（`tegra-demo-distro/build/`）的产物可直接当只读源复用，磁盘不够时不用复制：
