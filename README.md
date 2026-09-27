@@ -76,6 +76,27 @@ SSTATE_DIR ?= "${TOPDIR}/sstate-cache"                      # 自己的新缓存
 SSTATE_MIRRORS = "file://.* file:///旧路径/build/sstate-cache/PATH"  # 编译产物只读镜像
 ```
 
+### CI 构建缓存：sstate 存进 Release（突破 Actions 10GB）
+
+GitHub Actions 的缓存**每仓库上限 10GB**，而本项目的 Yocto `sstate` 缓存有 15–30GB——
+用 `actions/cache` 必然超限、save 静默失败，导致 CI **每次从零重编**。
+
+改用 **GitHub Release** 持久化（单文件 <2GiB、每 release ≤1000 资产、总大小不限）：
+
+- CI 编译产物按 **1.9GB 分卷**上传到 Release（`sstate-jetson` / `sstate-qemu`）
+- **版本化、非覆盖**：先传完整套，最后原子切换 `LATEST` 指针 → 中断也不会丢旧缓存
+- 还原时读 `LATEST` → 下载该套 → `sha256sum -c` 校验 → 解压进 `build/sstate-cache`
+- CI 内网拉取 15GB 约 **3 分钟**
+
+本地复用（可选，慢网慎用）：
+
+```bash
+scripts/pull-sstate.sh          # 拉 sstate-jetson → build/sstate-cache
+scripts/pull-sstate.sh qemu     # 拉 sstate-qemu（qemuarm64）
+```
+
+> 原则：**CI 编全量、本地只增量**。详见 [docs/17-dev-loop.md](docs/17-dev-loop.md)。
+
 ## 已解决的坑
 
 | 问题 | 原因 | 解决 |

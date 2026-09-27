@@ -63,6 +63,29 @@ SSTATE_DIR ?= "${TOPDIR}/sstate-cache"                       # your new local ca
 SSTATE_MIRRORS = "file://.* file:///old/path/build/sstate-cache/PATH"  # read-only mirror of build artifacts
 ```
 
+### CI cache: persist sstate in GitHub Releases (bypassing the 10GB Actions cap)
+
+GitHub Actions cache is capped at **10GB per repo**, while this project's Yocto
+`sstate` cache is 15–30GB — so `actions/cache` always exceeded the limit and the
+save failed silently, forcing a **from-scratch rebuild on every run**.
+
+We persist it in a **GitHub Release** instead (per-asset <2GiB, ≤1000 assets,
+unlimited total size):
+
+- compile artifacts are split into **1.9GB parts** and uploaded to Releases (`sstate-jetson` / `sstate-qemu`)
+- **versioned, never overwritten**: the full set is uploaded first, then an atomic `LATEST` pointer is flipped — an interrupted upload never loses the previous cache
+- restore reads `LATEST`, downloads that set, verifies with `sha256sum -c`, and extracts into `build/sstate-cache`
+- a 15GB restore takes ~**3 min** inside CI
+
+Local reuse (optional, mind your bandwidth):
+
+```bash
+scripts/pull-sstate.sh          # fetch sstate-jetson -> build/sstate-cache
+scripts/pull-sstate.sh qemu     # fetch sstate-qemu (qemuarm64)
+```
+
+> Principle: **build everything in CI, rebuild only what changed locally.** See [docs/17-dev-loop.md](docs/17-dev-loop.md).
+
 ## Gotchas already solved
 
 | Problem | Cause | Fix |
