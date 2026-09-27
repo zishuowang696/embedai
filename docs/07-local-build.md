@@ -19,6 +19,14 @@ PARALLEL_MAKE = "-j 2"      # 7~8GB 内存的机器；16GB 可 -j 4 或更高
 
 ---
 
+## 0.5 快速迭代（别每次建全量）
+
+- **全量 `embedai-image` 含 CUDA/llama**，任务多、慢；日常改发行版/系统逻辑，先用**精简镜像**验证：
+  - `embedai-qemu-image`（`core-image-minimal` + ssh，任务数少很多；也可在目标机上构建做系统级迭代）。
+- **只编受影响的 recipe**：`bitbake -c compile <recipe>` / `bitbake <recipe>`，不要每次都整镜像。
+- **保留 sstate**：第二次构建只重编改动部分（**首次慢是"工具链自举"，不是网络**）。
+- **分层**：lean 迭代 / full 发布；把全量交给 CI（16GB 内存 + sstate 复用），本地只做快速验证。
+
 ## 1. 分阶段：先 fetch，后 build
 
 进入 bitbake 环境（不要直接 build）：
