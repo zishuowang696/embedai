@@ -39,10 +39,10 @@ do_install() {
     install -m 0755 ${B}/bin/llama-server ${D}${bindir}/
 
     install -d ${D}${systemd_system_unitdir}
-    install -m 0644 ${WORKDIR}/llama-server.service ${D}${systemd_system_unitdir}/
+    install -m 0644 ${UNPACKDIR}/llama-server.service ${D}${systemd_system_unitdir}/
 
     install -d ${D}${sysconfdir}/default
-    install -m 0644 ${WORKDIR}/llama-server.default ${D}${sysconfdir}/default/llama-server
+    install -m 0644 ${UNPACKDIR}/llama-server.default ${D}${sysconfdir}/default/llama-server
     sed -i "s/@NGL@/${@bb.utils.contains('MACHINE_FEATURES', 'cuda', '99', '0', d)}/" \
         ${D}${sysconfdir}/default/llama-server
 

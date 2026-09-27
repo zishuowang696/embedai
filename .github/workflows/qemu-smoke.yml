@@ -87,11 +87,12 @@ jobs:
 
       - name: Build embedai-qemu-image (aarch64, resumable 5.5h budget)
         run: |
+          LOG="$PWD/build-run.log"
           ( while true; do df -h / >> disk.log; sleep 120; done ) &
           MON_PID=$!
           set +e
           # 内部 5.5h 预算：到点 SIGINT 让 bitbake 优雅收尾，已完成 sstate 保留，下次续编。
-          setsid kas build kas-ci.yml:kas-qemu.yml &
+          setsid bash -c "kas build kas-ci.yml:kas-qemu.yml 2>&1 | tee '$LOG'" &
           BPID=$!
           ( sleep 19800; echo "5.5h budget reached, SIGINT to build group"; \
             kill -INT -"$BPID" 2>/dev/null; sleep 180; \
@@ -100,11 +101,16 @@ jobs:
           wait "$BPID"; rc=$?
           kill "$WPID" "$MON_PID" 2>/dev/null || true
           set -e
-          echo "kas build exit code: $rc (非 0 多为预算到点主动暂停，属预期)"
-          echo "===== disk usage during build (tail) ====="
-          tail -20 disk.log || true
+          echo "kas build exit code: $rc"
           echo "===== final df ====="
           df -h /
+          # 区分"预算到点暂停/正常结束"（非 0 也可接受）与"真实任务失败"（必须失败退出）
+          if grep -qE "ERROR: Logfile of failure stored in|ERROR: Task .* failed with exit code|ERROR: Function failed" "$LOG"; then
+            echo "===== REAL BUILD ERROR ====="
+            grep -E "ERROR: (Task|Logfile|Function)" "$LOG" | tail -30
+            exit 1
+          fi
+          echo "no task failures: budget pause or clean completion"
 
       - name: Upload image artifacts
         continue-on-error: true
@@ -173,7 +179,7 @@ jobs:
             exit 0
           fi
           set +e
-          timeout 1500 kas shell kas-ci.yml:kas-qemu.yml -c "runqemu qemuarm64 nographic" > boot.log 2>&1
+          timeout 1500 kas shell kas-ci.yml:kas-qemu.yml -c "runqemu qemuarm64 nographic snapshot" > boot.log 2>&1
           echo "runqemu exit: $?"
           set -e
           echo "===== boot.log (tail) ====="
