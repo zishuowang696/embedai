@@ -137,13 +137,21 @@ jobs:
       - name: Show disk after cleanup
         run: df -h /
 
-      - name: Restore Yocto sstate
-        uses: actions/cache/restore@v4
-        with:
-          path: build/sstate-cache
-          key: embedai-sstate-${{ github.run_id }}
-          restore-keys: |
-            embedai-sstate-
+      # sstate 超过 Actions cache 10GB 上限，改用 Release 持久化（无大小限制）
+      - name: Restore Yocto sstate (from Release)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p build
+          if gh release view sstate-jetson >/dev/null 2>&1; then
+            gh release download sstate-jetson -D /tmp/sst -p 'sstate.part-*' || true
+            if ls /tmp/sst/sstate.part-* >/dev/null 2>&1; then
+              cat /tmp/sst/sstate.part-* | tar -xf - -C build && echo "sstate restored"
+            fi
+          else
+            echo "no sstate release yet"
+          fi
 
       - name: Install dependencies
         run: |
@@ -190,13 +198,20 @@ jobs:
           echo "===== final df ====="
           df -h /
 
-      - name: Save Yocto sstate
+      - name: Save Yocto sstate (to Release)
         if: always()
         continue-on-error: true
-        uses: actions/cache/save@v4
-        with:
-          path: build/sstate-cache
-          key: embedai-sstate-${{ github.run_id }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          [ -d build/sstate-cache ] || { echo "no sstate-cache"; exit 0; }
+          rm -f /tmp/sstate.part-*
+          tar -C build -cf - sstate-cache | split -b 1900M - /tmp/sstate.part-
+          gh release view sstate-jetson >/dev/null 2>&1 || \
+            gh release create sstate-jetson --title "Yocto sstate cache (Jetson)" \
+              --notes "Rolling sstate cache; assets replaced each build." --prerelease
+          gh release upload sstate-jetson /tmp/sstate.part-* --clobber
+          echo "sstate uploaded: $(ls /tmp/sstate.part-* | wc -l) parts"
 
       - name: Upload image artifacts
         continue-on-error: true

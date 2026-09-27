@@ -53,15 +53,22 @@ jobs:
               kas.yml > kas-ci.yml
           grep -E 'DL_DIR|SSTATE_MIRRORS' kas-ci.yml
 
-      # 复用真机构建缓存的 sstate（同为 aarch64 工具链），大幅加速后续 qemu 构建
-      - name: Restore sstate (reuse embedai-build cache)
-        uses: actions/cache/restore@v4
-        with:
-          path: build/sstate-cache
-          key: qemu-sstate-${{ github.run_id }}
-          restore-keys: |
-            embedai-sstate-
-            qemu-sstate-
+      # sstate 用 Release 持久化（无 10GB 限制）；真机 sstate 的 native/host 任务可共享
+      - name: Restore sstate (from Release)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p build
+          for tag in sstate-jetson sstate-qemu; do
+            if gh release view "$tag" >/dev/null 2>&1; then
+              rm -rf /tmp/sst; mkdir -p /tmp/sst
+              gh release download "$tag" -D /tmp/sst -p 'sstate.part-*' || true
+              if ls /tmp/sst/sstate.part-* >/dev/null 2>&1; then
+                cat /tmp/sst/sstate.part-* | tar -xf - -C build && echo "restored $tag"
+              fi
+            fi
+          done
 
       - name: kas checkout
         run: kas checkout kas-ci.yml:kas-qemu.yml
@@ -78,13 +85,20 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Save qemu sstate
+      - name: Save qemu sstate (to Release)
         if: always()
         continue-on-error: true
-        uses: actions/cache/save@v4
-        with:
-          path: build/sstate-cache
-          key: qemu-sstate-${{ github.run_id }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          [ -d build/sstate-cache ] || { echo "no sstate-cache"; exit 0; }
+          rm -f /tmp/sstate.part-*
+          tar -C build -cf - sstate-cache | split -b 1900M - /tmp/sstate.part-
+          gh release view sstate-qemu >/dev/null 2>&1 || \
+            gh release create sstate-qemu --title "Yocto sstate cache (QEMU)" \
+              --notes "Rolling sstate cache; assets replaced each build." --prerelease
+          gh release upload sstate-qemu /tmp/sstate.part-* --clobber
+          echo "sstate uploaded: $(ls /tmp/sstate.part-* | wc -l) parts"
 
       # 发布到 Release（永久可下；artifact 会过期）
       - name: Publish to Release (image-latest)
