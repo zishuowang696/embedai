@@ -28,6 +28,10 @@ EXTRA_OECMAKE = "\
     -DBUILD_SHARED_LIBS=OFF \
 "
 
+# CUDA：只为 Orin（Ampere，sm_87）生成 GPU 机器码，砍掉多架构 fatbin，显著提速。
+# meta-tegra 的 cuda.bbclass 会把它转成 -DCMAKE_CUDA_ARCHITECTURES；无 cuda 的机器该变量不生效。
+CUDA_ARCHITECTURES = "87"
+
 # 只编译需要的目标：避免 cmake --install 去装未构建的 example 导致失败
 do_compile() {
     cmake --build ${B} --target llama-cli --target llama-server
