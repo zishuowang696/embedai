@@ -16,6 +16,8 @@ PARALLEL_MAKE = "-j 2"      # 7~8GB 内存的机器；16GB 可 -j 4 或更高
 
 - 磁盘：`DL_DIR` + `SSTATE_DIR` + `tmp/` 都很大，建议保留 **≥50G**；`BB_DISKMON_DIRS` 会在低盘时 `HALT` 中断构建。
 - 查看负载：`uptime`（`load` 远大于核数 = 在换页，考虑降并行或加内存）。
+- 便捷（本地）：可自建 `local/kas-lowmem.yml`（`local/` 已被 `.gitignore` 忽略），内容即上面的 conf，然后 `kas build kas.yml:local/kas-lowmem.yml`；不影响 CI。
+- 内存实测：Yocto 构建会并行多个 `cc1plus`（每个数百 MB）；**7GB 主机**叠加桌面 + 多个编辑器进程极易触发换页（`free` 看 swap 用量）。
 
 ---
 
