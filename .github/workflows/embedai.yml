@@ -114,7 +114,7 @@ jobs:
     needs: validate
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-22.04
-    timeout-minutes: 350
+    timeout-minutes: 360
     permissions:
       contents: write
     concurrency:
@@ -176,16 +176,16 @@ jobs:
             sleep 15
           done
 
-      - name: Build embedai-image (resumable, 5h budget)
+      - name: Build embedai-image (resumable, 5.5h budget)
         run: |
           ( while true; do df -h / >> disk.log; sleep 120; done ) &
           MON_PID=$!
           set +e
-          # 内部 5h 预算：到点向整个进程组发 SIGINT，让 bitbake 优雅收尾。
+          # 内部 5.5h 预算：到点向整个进程组发 SIGINT，让 bitbake 优雅收尾。
           # 已完成的 sstate 会保留，随后的缓存步骤存起来，下次续编。
           setsid kas build kas-ci.yml &
           BPID=$!
-          ( sleep 18000; echo "5h budget reached, SIGINT to build group"; \
+          ( sleep 19800; echo "5.5h budget reached, SIGINT to build group"; \
             kill -INT -"$BPID" 2>/dev/null; sleep 180; \
             kill -KILL -"$BPID" 2>/dev/null ) &
           WPID=$!
