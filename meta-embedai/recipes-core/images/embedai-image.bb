@@ -8,8 +8,8 @@ REQUIRED_DISTRO_FEATURES = "opengl"
 # AI 网关：只留 SSH 管理入口，不装任何图形/桌面栈
 IMAGE_FEATURES += "ssh-server-openssh"
 
-CORE_IMAGE_BASE_INSTALL += " \
-    packagegroup-core-boot \
+# 注意：core-image-minimal 硬设 IMAGE_INSTALL，只认 CORE_IMAGE_EXTRA_INSTALL（BASE_INSTALL 无效）。
+CORE_IMAGE_EXTRA_INSTALL += " \
     packagegroup-core-ssh-openssh \
     llama-cpp \
     llama-model-qwen \
