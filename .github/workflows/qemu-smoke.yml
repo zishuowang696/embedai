@@ -136,6 +136,9 @@ jobs:
           gh release upload "$TAG" /tmp/LATEST --clobber
           gh release view "$TAG" --json assets --jq '.assets[].name' | while read -r name; do
             [ "$name" = "LATEST" ] && continue
+            case "$name" in
+              sstate.part-*|SHA256SUMS) gh release delete-asset "$TAG" "$name" -y >/dev/null 2>&1 || true; continue;;
+            esac
             aid="${name#sstate-}"; aid="${aid%%.*}"
             [ "$aid" = "$ID" ] && continue
             if [[ "$aid" < "$ID" ]]; then gh release delete-asset "$TAG" "$name" -y >/dev/null 2>&1 || true; fi
