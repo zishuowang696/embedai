@@ -173,12 +173,20 @@ jobs:
             exit 0
           fi
           set +e
-          timeout 420 kas shell kas-ci.yml:kas-qemu.yml -c "runqemu qemuarm64 nographic" > boot.log 2>&1
+          timeout 1500 kas shell kas-ci.yml:kas-qemu.yml -c "runqemu qemuarm64 nographic" > boot.log 2>&1
           echo "runqemu exit: $?"
           set -e
           echo "===== boot.log (tail) ====="
-          tail -50 boot.log
+          tail -80 boot.log
           echo "==========================="
+          if grep -q "LLAMA_BOOT_DEMO_END" boot.log; then
+            echo "LLAMA_CPP_DEMO_OK"
+            grep -B3 -A3 "EMBEDAI_OK" boot.log | tail -8 || true
+          elif grep -q "LLAMA_BOOT_DEMO_NO_MODEL" boot.log; then
+            echo "LLAMA_CPP_DEMO_NO_MODEL"
+          else
+            echo "LLAMA_CPP_DEMO_NOT_REACHED"
+          fi
           if grep -qE "login:|Startup finished|systemd\[1\]: Reached" boot.log; then
             echo "QEMU_BOOT_OK"
           else

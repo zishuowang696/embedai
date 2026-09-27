@@ -1,0 +1,13 @@
+[Unit]
+Description=EmbedAI boot demo: one-shot llama.cpp inference (smoke)
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/llama-boot-demo.sh
+StandardOutput=journal+console
+StandardError=journal+console
+TimeoutStartSec=1800
+
+[Install]
+WantedBy=multi-user.target

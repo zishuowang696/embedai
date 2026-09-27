@@ -14,14 +14,15 @@ SRC_URI = " \
 SRCREV = "dcad77cc3b0865153f486327064fb0320a57a476"
 PV = "b8933"
 
-inherit cmake pkgconfig cuda systemd
+inherit cmake pkgconfig systemd
+# CUDA 仅在带 cuda MACHINE_FEATURE 的机器（Jetson，见 meta-tegra tegra-common.inc）启用；
+# QEMU 等无 GPU 机器走纯 CPU/NEON。
+inherit ${@bb.utils.contains('MACHINE_FEATURES', 'cuda', 'cuda', '', d)}
 
-# Orin Nano（Cortex-A78AE, aarch64）：Release + AArch64 NEON + CUDA(GPU)
-# cuda bbclass（meta-tegra）负责 CUDA 工具链/头文件/运行库与 sm_87 架构
 EXTRA_OECMAKE = "\
     -DCMAKE_BUILD_TYPE=Release \
     -DLLAMA_CPU_AARCH64=ON \
-    -DGGML_CUDA=ON \
+    -DGGML_CUDA=${@bb.utils.contains('MACHINE_FEATURES', 'cuda', 'ON', 'OFF', d)} \
     -DLLAMA_BUILD_TESTS=OFF \
     -DLLAMA_OPENSSL=OFF \
     -DBUILD_SHARED_LIBS=OFF \
@@ -42,6 +43,8 @@ do_install() {
 
     install -d ${D}${sysconfdir}/default
     install -m 0644 ${WORKDIR}/llama-server.default ${D}${sysconfdir}/default/llama-server
+    sed -i "s/@NGL@/${@bb.utils.contains('MACHINE_FEATURES', 'cuda', '99', '0', d)}/" \
+        ${D}${sysconfdir}/default/llama-server
 
     install -d ${D}${localstatedir}/lib/llama/models
 }
