@@ -6,6 +6,7 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'local/**'
+      - 'scripts/**'
       - '**/*.md'
       - 'LICENSE'
       - '.gitignore'
@@ -13,6 +14,7 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'local/**'
+      - 'scripts/**'
       - '**/*.md'
       - 'LICENSE'
       - '.gitignore'
