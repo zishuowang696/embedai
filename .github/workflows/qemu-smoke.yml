@@ -92,12 +92,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           [ -d build/sstate-cache ] || { echo "no sstate-cache"; exit 0; }
-          rm -f /tmp/sstate.part-*
+          rm -f /tmp/sstate.part-* /tmp/SHA256SUMS
           tar -C build -cf - sstate-cache | split -b 1900M - /tmp/sstate.part-
+          ( cd /tmp && sha256sum sstate.part-* > SHA256SUMS )
           gh release view sstate-qemu >/dev/null 2>&1 || \
             gh release create sstate-qemu --title "Yocto sstate cache (QEMU)" \
               --notes "Rolling sstate cache; assets replaced each build." --prerelease
-          gh release upload sstate-qemu /tmp/sstate.part-* --clobber
+          gh release upload sstate-qemu /tmp/sstate.part-* /tmp/SHA256SUMS --clobber
           echo "sstate uploaded: $(ls /tmp/sstate.part-* | wc -l) parts"
 
       # 发布到 Release（永久可下；artifact 会过期）
