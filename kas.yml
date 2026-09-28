@@ -103,3 +103,6 @@ local_conf_header:
         HALT,/tmp,10M,1K"
     PACKAGECONFIG:append:pn-qemu-system-native = " sdl"
     INHERIT += "rm_work"
+    # 用 NVIDIA 预编译 OP-TEE（Trusted OS），不从源码编。
+    # 源码编 optee-os 会拉 python3-cryptography → rust-native → llvm-native（数小时）。
+    USE_PREBUILT_OPTEE = "1"
