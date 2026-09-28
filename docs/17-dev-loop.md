@@ -51,3 +51,16 @@ kas shell kas.yml -c "devtool finish <recipe> <layer>"
 ## 一句话
 **本机不做"从零全量"，只做"增量复用"**：
 CI 编全量 → 存 sstate → 本地拉 sstate → 只编改动 → 精简镜像验证 → 出镜像回 CI。
+
+## 附：eSDK（可扩展 SDK）——彻底离线单包开发
+
+若想让本地**完全脱离全量构建**（也不需要构建树），用 eSDK：
+
+- CI：`.github/workflows/esdk.yml`（手动触发）→ restore sstate → `populate_sdk_ext` → 分卷发布到 Release `esdk-latest`。
+- 本地：
+  ```bash
+  cat esdk-*.part-* > esdk.sh && sh esdk.sh
+  source <安装目录>/environment-setup-*
+  devtool modify <recipe> && devtool build <recipe>   # 离线、分钟级
+  ```
+- eSDK = 交叉工具链 + 目标 sysroot + bitbake/devtool + **所需 sstate 子集**（体积较大，故分卷）。

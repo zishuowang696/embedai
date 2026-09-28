@@ -10,6 +10,8 @@ on:
       - '**/*.md'
       - 'LICENSE'
       - '.gitignore'
+      - 'kas-esdk.yml'
+      - '.github/workflows/esdk.yml'
   pull_request:
     paths-ignore:
       - 'docs/**'
@@ -18,6 +20,8 @@ on:
       - '**/*.md'
       - 'LICENSE'
       - '.gitignore'
+      - 'kas-esdk.yml'
+      - '.github/workflows/esdk.yml'
   workflow_dispatch:
     inputs:
       force_cancel:

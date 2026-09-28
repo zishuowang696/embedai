@@ -1,0 +1,124 @@
+name: esdk
+
+# 构建可扩展 SDK（eSDK），发布分卷到 Release，供本地【离线】单包开发。
+# 先 restore sstate（否则等于全量重编）；大多命中 sstate，很快。
+# 本地： cat esdk-*.part-* > esdk.sh && sh esdk.sh ; source environment-setup-* ; devtool modify/build <recipe>
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-esdk:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    concurrency:
+      group: esdk-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - name: Show disk
+        run: df -h /
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq chrpath diffstat python3-websockets
+          python -m pip install kas==5.3
+
+      - name: Generate CI kas config (neutralize host paths)
+        run: |
+          sed -e 's|DL_DIR ?= "/home/admin/tegra/tegra-demo-distro/build/downloads"|DL_DIR ?= "${TOPDIR}/downloads"|' \
+              -e 's|SSTATE_MIRRORS = "file://.\* file:///home/admin/tegra/tegra-demo-distro/build/sstate-cache/PATH"|SSTATE_MIRRORS = ""|' \
+              kas.yml > kas-ci.yml
+          grep -E 'DL_DIR|SSTATE_MIRRORS' kas-ci.yml
+
+      - name: Restore sstate (from Release)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p build
+          TAG=sstate-jetson
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            rm -rf /tmp/sst; mkdir -p /tmp/sst
+            gh release download "$TAG" -D /tmp/sst -p 'LATEST' 2>/dev/null || true
+            ID=$(tr -d '[:space:]' < /tmp/sst/LATEST 2>/dev/null || true)
+            if [ -n "$ID" ]; then
+              gh release download "$TAG" -D /tmp/sst -p "sstate-${ID}.part-*" -p "sstate-${ID}.SHA256SUMS" || true
+              if ( cd /tmp/sst && sha256sum -c "sstate-${ID}.SHA256SUMS" \
+                   && cat sstate-${ID}.part-* | tar -xf - -C "$GITHUB_WORKSPACE/build" ); then
+                echo "sstate restored: $ID"
+              fi
+            else
+              echo "no LATEST in sstate release"
+            fi
+          else
+            echo "no sstate release yet"
+          fi
+
+      - name: kas checkout
+        run: kas checkout kas-ci.yml:kas-esdk.yml
+
+      - name: Build eSDK (resumable 5.5h budget)
+        run: |
+          LOG="$PWD/esdk-run.log"
+          ( while true; do df -h / >> disk.log; sleep 120; done ) &
+          MON_PID=$!
+          set +e
+          setsid bash -c "kas shell kas-ci.yml:kas-esdk.yml -c 'bitbake embedai-image -c populate_sdk_ext' 2>&1 | tee '$LOG'" &
+          BPID=$!
+          ( sleep 19800; echo "budget reached, SIGINT"; kill -INT -"$BPID" 2>/dev/null; sleep 180; kill -KILL -"$BPID" 2>/dev/null ) &
+          WPID=$!
+          wait "$BPID"; rc=$?
+          kill "$WPID" "$MON_PID" 2>/dev/null || true
+          set -e
+          echo "esdk build exit=$rc"
+          df -h /
+          if grep -qE "ERROR: Logfile of failure stored in|ERROR: Task .* failed with exit code|ERROR: Function failed" "$LOG"; then
+            echo "===== REAL BUILD ERROR ====="
+            grep -E "ERROR: (Task|Logfile|Function)" "$LOG" | tail -30
+            exit 1
+          fi
+
+      - name: Publish eSDK (split <2GiB, Release esdk-latest)
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          SDK=$(find build/tmp/deploy/sdk -maxdepth 1 -type f -name '*.sh' | sort | tail -1)
+          [ -n "$SDK" ] || { echo "no eSDK installer found"; exit 0; }
+          echo "eSDK: $SDK ($(du -h "$SDK" | cut -f1))"
+          TAG=esdk-latest
+          ID="$(date -u +%Y%m%d-%H%M%S)-${GITHUB_RUN_ID}"
+          rm -rf /tmp/esdk; mkdir -p /tmp/esdk
+          split -b 1900M "$SDK" "/tmp/esdk/esdk-${ID}.part-"
+          ( cd /tmp/esdk && sha256sum esdk-${ID}.part-* > "esdk-${ID}.SHA256SUMS" )
+          gh release view "$TAG" >/dev/null 2>&1 || \
+            gh release create "$TAG" --title "EmbedAI eSDK (extensible SDK)" \
+              --notes "Split eSDK installer. Reassemble: cat esdk-*.part-* > esdk.sh && sh esdk.sh" --prerelease
+          gh release upload "$TAG" /tmp/esdk/esdk-${ID}.part-* "/tmp/esdk/esdk-${ID}.SHA256SUMS"
+          printf '%s\n' "$ID" > /tmp/esdk/LATEST
+          gh release upload "$TAG" /tmp/esdk/LATEST --clobber
+          gh release view "$TAG" --json assets --jq '.assets[].name' | while read -r name; do
+            [ "$name" = "LATEST" ] && continue
+            aid="${name#esdk-}"; aid="${aid%%.*}"
+            [ "$aid" = "$ID" ] && continue
+            if [[ "$aid" < "$ID" ]]; then gh release delete-asset "$TAG" "$name" -y >/dev/null 2>&1 || true; fi
+          done
+          echo "eSDK set $ID uploaded: $(ls /tmp/esdk/esdk-${ID}.part-* | wc -l) parts"

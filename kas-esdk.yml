@@ -1,0 +1,11 @@
+header:
+  version: 22
+
+# 让 embedai-image 可构建 eSDK（可扩展 SDK）。
+# eSDK = 交叉工具链 + 目标 sysroot + bitbake/devtool + 该镜像所需的 sstate 子集；
+# 本地装完即可【离线】用 devtool 单包开发，不必再跑全量构建。
+#
+# 用法： kas shell kas.yml:kas-esdk.yml -c "bitbake embedai-image -c populate_sdk_ext"
+local_conf_header:
+  esdk: |
+    INHERIT += "populate_sdk_ext"
