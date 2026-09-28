@@ -106,3 +106,8 @@ local_conf_header:
     # 用 NVIDIA 预编译 OP-TEE（Trusted OS），不从源码编。
     # 源码编 optee-os 会拉 python3-cryptography → rust-native → llvm-native（数小时）。
     USE_PREBUILT_OPTEE = "1"
+    # 瘦身：去掉相机 / CAN 总线内核模块（保留音频、NVMe、PCIe、网络等必需）。
+    MACHINE_EXTRA_RRECOMMENDS:remove = "nvidia-kernel-oot-cameras nvidia-kernel-oot-canbus"
+    # 只记录镜像级构建历史：产出 installed-package-sizes.txt，便于按大小精准裁剪。
+    BUILDHISTORY_FEATURES = "image"
+    INHERIT += "buildhistory"
