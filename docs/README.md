@@ -28,6 +28,7 @@
 | 16 | [市场与验证](16-market.md) | 需求、客户、竞争、低成本验证与变现路径 |
 | 17 | [开发迭代](17-dev-loop.md) | 复用 sstate、只编改动、精简镜像；CI 编全量 |
 | 18 | [SDK / eSDK / sstate](18-sdk-esdk.md) | 三者概念、区别、如何选、eSDK 工作流 |
+| 19 | [稀疏镜像](19-sparse-images.md) | 为什么 14GB 其实只有 1GB；检测与压缩（zstd/tar --sparse/bmaptool） |
 
 ## 项目链接
 
