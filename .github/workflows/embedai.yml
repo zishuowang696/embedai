@@ -269,6 +269,10 @@ jobs:
           else
             echo "no image files found"
           fi
+          # 清理历史遗留的"裸 ext4 分卷"（现在已不再发布裸 ext4）；避免 Release 里堆旧垃圾
+          gh release view image-latest --json assets --jq '.assets[].name' | grep -E '\.ext4\.part-' | while read -r n; do
+            gh release delete-asset image-latest "$n" -y >/dev/null 2>&1 || true
+          done
 
       - name: Save Yocto sstate (to Release, versioned)
         if: always()
