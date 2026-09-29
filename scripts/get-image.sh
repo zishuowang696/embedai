@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
 # 取 Jetson 镜像 / 刷机包（自动探测机器名与资产，不用记文件名）。
 #
-# 用法：
-#   scripts/get-image.sh [-I] [--dry-run] [-d 目录] [machine]
-#
-#   （默认）   下载"刷机包"：<machine>.rootfs.tegraflash-tar.zst（含 bootloader + rootfs，可直接刷机）
-#   -I         只下"镜像"：独立 rootfs 镜像（*rootfs.ext4 / *rootfs.tar* 等，若有）
-#   --dry-run  只打印将下载什么，不下载
-#   -d 目录    目标目录（默认当前目录）
-#   machine    目标机器（默认自动探测）
+# 用法（默认参数已内置，**直接跑即可**）：
+#   scripts/get-image.sh                 # 下"刷机包"到当前目录（默认机器/仓库/tag 都已定好）
+#   scripts/get-image.sh -I              # 只下独立 rootfs 镜像（若有）
+#   scripts/get-image.sh --dry-run       # 只看会下什么
+#   scripts/get-image.sh -d ./flash      # 指定目录
+#   scripts/get-image.sh <machine>       # 指定机器（默认 jetson-orin-nano-devkit-nvme）
 #
 # 环境变量：EMBEDAI_REPO（默认 zishuowang696/embedai）、EMBEDAI_TAG（默认 image-latest）、EMBEDAI_MACHINE
 # 依赖：gh；下载走同目录 gh-download.sh（镜像测速 + aria2 多源 + 校验）
@@ -16,6 +14,7 @@ set -euo pipefail
 
 REPO="${EMBEDAI_REPO:-zishuowang696/embedai}"
 TAG="${EMBEDAI_TAG:-image-latest}"
+DEFAULT_MACHINE="jetson-orin-nano-devkit-nvme"   # 本项目主线，默认用它，免输入
 MACHINE="${EMBEDAI_MACHINE:-}"
 DEST="."; IMAGE_ONLY=0; DRY=0
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -35,7 +34,10 @@ names=$(gh api "repos/$REPO/releases/tags/$TAG" --jq '.assets[].name' 2>/dev/nul
 [ -n "$names" ] || { echo "取不到 $TAG 的资产（检查 gh 登录/仓库）"; exit 1; }
 
 if [ -z "$MACHINE" ]; then
-  MACHINE=$(printf '%s\n' "$names" | sed -nE 's/^embedai-image-(.+)\.rootfs.*/\1/p' | sort -u | head -1)
+  # 默认用主线机器；若该 release 里没有，再自动探测
+  MACHINE="$DEFAULT_MACHINE"
+  printf '%s\n' "$names" | grep -q "^embedai-image-$MACHINE\." || \
+    MACHINE=$(printf '%s\n' "$names" | sed -nE 's/^embedai-image-(.+)\.rootfs.*/\1/p' | sort -u | head -1)
 fi
 [ -n "$MACHINE" ] || { echo "无法探测机器名，请显式给出（如 jetson-orin-nano-devkit-nvme）"; exit 1; }
 echo "repo=$REPO  tag=$TAG  machine=$MACHINE$([ "$DRY" = 1 ] && echo '  (dry-run)')"
