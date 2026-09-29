@@ -247,10 +247,16 @@ jobs:
           files=$(find -L build/tmp/deploy/images/jetson-orin-nano-devkit-nvme -maxdepth 1 -type f -name 'embedai-image-*')
           if [ -n "$files" ]; then
             for f in $files; do
-              sz=$(stat -Lc %s "$f" 2>/dev/null || echo 0)
               bn=$(basename "$f")
+              # 跳过"裸稀疏 ext4"：逻辑上十几 GB，实际几乎全是空洞；刷机用 tegraflash-tar.zst 即可
+              case "$bn" in
+                *.ext4)
+                  echo "skip sparse raw image: $bn (logical $(stat -Lc %s "$f") bytes, physical $(du -h "$f" | cut -f1))"
+                  continue;;
+              esac
+              sz=$(stat -Lc %s "$f" 2>/dev/null || echo 0)
               if [ "$sz" -ge 2000000000 ]; then
-                # Release 单文件上限 <2GiB：超了必须分卷，否则 HTTP 422（之前就是这么丢的）
+                # Release 单文件上限 <2GiB：超了必须分卷，否则 HTTP 422
                 rm -rf /tmp/pkg; mkdir -p /tmp/pkg
                 split -b 1900M "$f" "/tmp/pkg/${bn}.part-"
                 gh release upload image-latest /tmp/pkg/${bn}.part-* --clobber
