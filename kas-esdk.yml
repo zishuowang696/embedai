@@ -5,7 +5,12 @@ header:
 # eSDK = 交叉工具链 + 目标 sysroot + bitbake/devtool + 该镜像所需的 sstate 子集；
 # 本地装完即可【离线】用 devtool 单包开发，不必再跑全量构建。
 #
+# 注意：populate_sdk_ext 在 classes-recipe/，**不能**用全局 INHERIT（那只找 classes/），
+# 必须走 IMAGE_CLASSES（image.bbclass 里 inherit_defer ${IMGCLASSES}）。
+#
 # 用法： kas shell kas.yml:kas-esdk.yml -c "bitbake embedai-image -c populate_sdk_ext"
 local_conf_header:
   esdk: |
-    INHERIT += "populate_sdk_ext"
+    IMAGE_CLASSES:append = " populate_sdk_ext"
+    # 只带该镜像所需的 sstate 子集（默认 full 会大很多）
+    SDK_EXT_TYPE = "minimal"

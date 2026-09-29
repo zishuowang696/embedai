@@ -246,8 +246,20 @@ jobs:
               --prerelease
           files=$(find -L build/tmp/deploy/images/jetson-orin-nano-devkit-nvme -maxdepth 1 -type f -name 'embedai-image-*')
           if [ -n "$files" ]; then
-            gh release upload image-latest $files --clobber
-            echo "uploaded:"; echo "$files"
+            for f in $files; do
+              sz=$(stat -Lc %s "$f" 2>/dev/null || echo 0)
+              bn=$(basename "$f")
+              if [ "$sz" -ge 2000000000 ]; then
+                # Release 单文件上限 <2GiB：超了必须分卷，否则 HTTP 422（之前就是这么丢的）
+                rm -rf /tmp/pkg; mkdir -p /tmp/pkg
+                split -b 1900M "$f" "/tmp/pkg/${bn}.part-"
+                gh release upload image-latest /tmp/pkg/${bn}.part-* --clobber
+                echo "split-uploaded: $bn ($((sz/1048576)) MiB) -> $(ls /tmp/pkg/${bn}.part-* | wc -l) parts"
+              else
+                gh release upload image-latest "$f" --clobber
+                echo "uploaded: $bn ($((sz/1048576)) MiB)"
+              fi
+            done
           else
             echo "no image files found"
           fi
