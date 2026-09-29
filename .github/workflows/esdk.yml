@@ -79,7 +79,7 @@ jobs:
           ( while true; do df -h / >> disk.log; sleep 120; done ) &
           MON_PID=$!
           set +e
-          setsid bash -c "kas shell kas-ci.yml:kas-esdk.yml -c 'bitbake embedai-image -c populate_sdk_ext' 2>&1 | tee '$LOG'" &
+          setsid bash -o pipefail -c "kas shell kas-ci.yml:kas-esdk.yml -c 'bitbake embedai-image -c populate_sdk_ext' 2>&1 | tee '$LOG'" &
           BPID=$!
           ( sleep 19800; echo "budget reached, SIGINT"; kill -INT -"$BPID" 2>/dev/null; sleep 180; kill -KILL -"$BPID" 2>/dev/null ) &
           WPID=$!
@@ -88,7 +88,7 @@ jobs:
           set -e
           echo "esdk build exit=$rc"
           df -h /
-          if grep -qE "ERROR: Logfile of failure stored in|ERROR: Task .* failed with exit code|ERROR: Function failed" "$LOG"; then
+          if grep -qE "ERROR: Logfile of failure stored in|ERROR: Task .* failed with exit code|ERROR: Function failed|ERROR: No new tasks can be executed|- ERROR +-|No space left|ENOSPC" "$LOG"; then
             echo "===== REAL BUILD ERROR ====="
             grep -E "ERROR: (Task|Logfile|Function)" "$LOG" | tail -30
             exit 1

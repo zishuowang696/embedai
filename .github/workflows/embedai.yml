@@ -200,7 +200,7 @@ jobs:
           set +e
           # 内部 5.5h 预算：到点向整个进程组发 SIGINT，让 bitbake 优雅收尾。
           # 已完成的 sstate 会保留，随后的缓存步骤存起来，下次续编。
-          setsid bash -c "kas build kas-ci.yml 2>&1 | tee '$LOG'" &
+          setsid bash -o pipefail -c "kas build kas-ci.yml 2>&1 | tee '$LOG'" &
           BPID=$!
           ( sleep 19800; echo "5.5h budget reached, SIGINT to build group"; \
             kill -INT -"$BPID" 2>/dev/null; sleep 180; \
@@ -213,7 +213,7 @@ jobs:
           echo "===== final df ====="
           df -h /
           # 区分"预算到点暂停/正常结束"（非 0 也可接受）与"真实任务失败"（必须失败退出）
-          if grep -qE "ERROR: Logfile of failure stored in|ERROR: Task .* failed with exit code|ERROR: Function failed" "$LOG"; then
+          if grep -qE "ERROR: Logfile of failure stored in|ERROR: Task .* failed with exit code|ERROR: Function failed|ERROR: No new tasks can be executed|- ERROR +-|No space left|ENOSPC" "$LOG"; then
             echo "===== REAL BUILD ERROR ====="
             grep -E "ERROR: (Task|Logfile|Function)" "$LOG" | tail -30
             exit 1
