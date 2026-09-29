@@ -54,7 +54,7 @@ gh api "repos/$REPO/releases/tags/$TAG" \
 
 ID=""
 rm -f LATEST
-gh release download "$TAG" --repo "$REPO" -D "$STAGE" -p 'LATEST' --clobber 2>/dev/null || true
+gh release download "$TAG" --repo "$REPO" -D "$STAGE" -p 'LATEST' 2>/dev/null || true
 [ -f LATEST ] && ID="$(tr -d '[:space:]' < LATEST)"
 
 if [ -n "$ID" ]; then
@@ -75,7 +75,7 @@ if command -v aria2c >/dev/null 2>&1; then
   while IFS=$'\t' read -r name url; do
     for m in $MIRRORS; do printf '%s/%s\n' "$m" "$url"; done
     printf '  out=%s\n' "$name"
-  done < assets.tsv
+  done < assets.tsv > dl.aria2
   echo "  使用 aria2c（多源分段，可续传）"
   aria2c -c -j "$JOBS" -x "$CONN" -s "$CONN" -k 1M --file-allocation=none \
     --summary-interval=30 --console-log-level=warn -d "$STAGE" -i dl.aria2
