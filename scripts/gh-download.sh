@@ -42,6 +42,24 @@ probe_range() { # 返回 206 视为支持 Range
   [ "$code" = "206" ]
 }
 
+# 列资产（无需登录）：优先已授权 gh，否则用公开 API（curl）+ jq/python3 解析
+list_assets() { # repo tag -> "name<TAB>url"
+  local repo="$1" tag="$2" json hdr=()
+  if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    gh api "repos/$repo/releases/tags/$tag" --jq '.assets[] | [.name, .browser_download_url] | @tsv'
+    return $?
+  fi
+  hdr=(-H 'Accept: application/vnd.github+json')
+  [ -n "${GH_TOKEN:-}" ] && hdr+=(-H "Authorization: Bearer $GH_TOKEN")
+  json=$(curl -fsSL "${hdr[@]}" "https://api.github.com/repos/$repo/releases/tags/$tag") || return 1
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$json" | jq -r '.assets[] | "\(.name)\t\(.browser_download_url)"'
+  else
+    printf '%s' "$json" | python3 -c 'import sys,json
+for a in json.load(sys.stdin)["assets"]: print(a["name"]+"\t"+a["browser_download_url"])'
+  fi
+}
+
 # 1) 组装资产清单：name \t url
 : > assets.tsv
 if [ "${#POS[@]}" -eq 1 ] && [[ "${POS[0]}" == http* ]]; then
@@ -49,9 +67,7 @@ if [ "${#POS[@]}" -eq 1 ] && [[ "${POS[0]}" == http* ]]; then
   printf '%s\t%s\n' "$name" "${POS[0]}" > assets.tsv
 elif [ "${#POS[@]}" -ge 2 ]; then
   repo="${POS[0]}"; tag="${POS[1]}"
-  command -v gh >/dev/null 2>&1 || { echo "按 owner/repo 下载需要 gh CLI"; exit 1; }
-  gh api "repos/$repo/releases/tags/$tag" \
-    --jq '.assets[] | [.name, .browser_download_url] | @tsv' > assets.tsv
+  list_assets "$repo" "$tag" > assets.tsv
 else
   echo "用法: $0 <owner/repo> <tag> [--pattern GLOB]... [-d DIR]"; exit 1
 fi
@@ -76,13 +92,15 @@ for m in $MIRRORS; do
 done
 [ "${#GOOD_MIRRORS[@]}" -gt 0 ] || { echo "无支持 Range 的镜像，改用直连（不并行分段）"; GOOD_MIRRORS=(""); }
 
-# 3) 组装 aria2 输入（每个文件列所有可用镜像 + out=）
+# 3) 组装 aria2 输入（**同一文件的多个镜像放同一行、TAB 分隔** → 才被当作镜像并行，而非下两遍）
 : > dl.aria2
 while IFS=$'\t' read -r n u; do
+  first=1
   for m in "${GOOD_MIRRORS[@]}"; do
-    if [ -n "$m" ]; then printf '%s/%s\n' "${m%/}" "$u"; else printf '%s\n' "$u"; fi
+    full="$u"; [ -n "$m" ] && full="${m%/}/$u"
+    if [ "$first" = 1 ]; then printf '%s' "$full"; first=0; else printf '\t%s' "$full"; fi
   done
-  printf '  out=%s\n' "$n"
+  printf '\n  out=%s\n' "$n"
 done < assets.tsv > dl.aria2
 
 # 4) 下载

@@ -73,8 +73,11 @@ echo "[2/4] 下载（镜像：$MIRRORS）"
 if command -v aria2c >/dev/null 2>&1; then
   : > dl.aria2
   while IFS=$'\t' read -r name url; do
-    for m in $MIRRORS; do printf '%s/%s\n' "$m" "$url"; done
-    printf '  out=%s\n' "$name"
+    first=1
+    for m in $MIRRORS; do
+      if [ "$first" = 1 ]; then printf '%s/%s' "$m" "$url"; first=0; else printf '\t%s/%s' "$m" "$url"; fi
+    done
+    printf '\n  out=%s\n' "$name"
   done < assets.tsv > dl.aria2
   echo "  使用 aria2c（多源分段，可续传）"
   aria2c -c -j "$JOBS" -x "$CONN" -s "$CONN" -k 1M --file-allocation=none \
