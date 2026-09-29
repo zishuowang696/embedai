@@ -29,9 +29,27 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-command -v gh >/dev/null 2>&1 || { echo "需要 gh CLI"; exit 1; }
-names=$(gh api "repos/$REPO/releases/tags/$TAG" --jq '.assets[].name' 2>/dev/null)
-[ -n "$names" ] || { echo "取不到 $TAG 的资产（检查 gh 登录/仓库）"; exit 1; }
+command -v gh >/dev/null 2>&1 || true
+
+# 列资产名（**无需登录**）：优先已授权 gh，否则公开 API（curl）+ jq/python3
+fetch_names() {
+  local json hdr=()
+  if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    gh api "repos/$REPO/releases/tags/$TAG" --jq '.assets[].name'
+    return $?
+  fi
+  hdr=(-H 'Accept: application/vnd.github+json')
+  [ -n "${GH_TOKEN:-}" ] && hdr+=(-H "Authorization: Bearer $GH_TOKEN")
+  json=$(curl -fsSL "${hdr[@]}" "https://api.github.com/repos/$REPO/releases/tags/$TAG") || return 1
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$json" | jq -r '.assets[].name'
+  else
+    printf '%s' "$json" | python3 -c 'import sys,json
+for a in json.load(sys.stdin)["assets"]: print(a["name"])'
+  fi
+}
+names=$(fetch_names 2>/dev/null)
+[ -n "$names" ] || { echo "取不到 $TAG 的资产（检查仓库/网络；公开 API 限频时可 export GH_TOKEN=...）"; exit 1; }
 
 if [ -z "$MACHINE" ]; then
   # 默认用主线机器；若该 release 里没有，再自动探测
