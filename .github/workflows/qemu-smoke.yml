@@ -121,37 +121,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Save qemu sstate (to Release, versioned)
-        if: always()
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          [ -d build/sstate-cache ] || { echo "no sstate-cache"; exit 0; }
-          TAG=sstate-qemu
-          gh release view "$TAG" >/dev/null 2>&1 || \
-            gh release create "$TAG" --title "Yocto sstate cache (QEMU)" \
-              --notes "Versioned sstate sets. LATEST points to the newest complete set; older sets are cleaned up. Assets are never overwritten." --prerelease
-          ID="$(date -u +%Y%m%d-%H%M%S)-${GITHUB_RUN_ID}"
-          rm -f /tmp/part-*
-          tar -C build -cf - sstate-cache | split -b 1900M - /tmp/part-
-          for p in /tmp/part-*; do mv "$p" "/tmp/sstate-${ID}.$(basename "$p")"; done
-          ( cd /tmp && sha256sum sstate-${ID}.part-* > "sstate-${ID}.SHA256SUMS" )
-          gh release upload "$TAG" /tmp/sstate-${ID}.part-* "/tmp/sstate-${ID}.SHA256SUMS"
-          printf '%s\n' "$ID" > /tmp/LATEST
-          gh release upload "$TAG" /tmp/LATEST --clobber
-          gh release view "$TAG" --json assets --jq '.assets[].name' | while read -r name; do
-            [ "$name" = "LATEST" ] && continue
-            case "$name" in
-              sstate.part-*|SHA256SUMS) gh release delete-asset "$TAG" "$name" -y >/dev/null 2>&1 || true; continue;;
-            esac
-            aid="${name#sstate-}"; aid="${aid%%.*}"
-            [ "$aid" = "$ID" ] && continue
-            if [[ "$aid" < "$ID" ]]; then gh release delete-asset "$TAG" "$name" -y >/dev/null 2>&1 || true; fi
-          done
-          echo "sstate set $ID uploaded: $(ls /tmp/sstate-${ID}.part-* | wc -l) parts"
-
-      # 发布到 Release（永久可下；artifact 会过期）
+      # 发布到 Release（永久可下；artifact 会过期）——放在启动冒烟之前
       - name: Publish to Release (image-latest)
         if: always()
         continue-on-error: true
@@ -199,3 +169,39 @@ jobs:
             echo "QEMU_BOOT_CHECK_FAILED"
             exit 1
           fi
+
+      # 放在冒烟之后：存 sstate 前要删 build/tmp，而 runqemu 依赖它，必须先跑完冒烟。
+      - name: Save qemu sstate (to Release, versioned)
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          [ -d build/sstate-cache ] || { echo "no sstate-cache"; exit 0; }
+          echo "===== df before freeing ====="; df -h /
+          du -sh build/tmp build/downloads 2>/dev/null || true
+          # 镜像已发布、冒烟已跑完，删掉不再需要的 tmp/ 与 downloads/ 给分卷腾地
+          rm -rf build/tmp build/downloads
+          echo "===== df after freeing ====="; df -h /
+          TAG=sstate-qemu
+          gh release view "$TAG" >/dev/null 2>&1 || \
+            gh release create "$TAG" --title "Yocto sstate cache (QEMU)" \
+              --notes "Versioned sstate sets. LATEST points to the newest complete set; older sets are cleaned up. Assets are never overwritten." --prerelease
+          ID="$(date -u +%Y%m%d-%H%M%S)-${GITHUB_RUN_ID}"
+          rm -f /tmp/part-*
+          tar -C build -cf - sstate-cache | split -b 1900M - /tmp/part-
+          for p in /tmp/part-*; do mv "$p" "/tmp/sstate-${ID}.$(basename "$p")"; done
+          ( cd /tmp && sha256sum sstate-${ID}.part-* > "sstate-${ID}.SHA256SUMS" )
+          gh release upload "$TAG" /tmp/sstate-${ID}.part-* "/tmp/sstate-${ID}.SHA256SUMS"
+          printf '%s\n' "$ID" > /tmp/LATEST
+          gh release upload "$TAG" /tmp/LATEST --clobber
+          gh release view "$TAG" --json assets --jq '.assets[].name' | while read -r name; do
+            [ "$name" = "LATEST" ] && continue
+            case "$name" in
+              sstate.part-*|SHA256SUMS) gh release delete-asset "$TAG" "$name" -y >/dev/null 2>&1 || true; continue;;
+            esac
+            aid="${name#sstate-}"; aid="${aid%%.*}"
+            [ "$aid" = "$ID" ] && continue
+            if [[ "$aid" < "$ID" ]]; then gh release delete-asset "$TAG" "$name" -y >/dev/null 2>&1 || true; fi
+          done
+          echo "sstate set $ID uploaded: $(ls /tmp/sstate-${ID}.part-* | wc -l) parts"
