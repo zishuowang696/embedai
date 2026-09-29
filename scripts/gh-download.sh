@@ -109,7 +109,13 @@ if command -v aria2c >/dev/null 2>&1; then
   aria2c -c -j "$JOBS" -x "$CONN" -s "$CONN" -k 1M --file-allocation=none \
     --summary-interval=30 --console-log-level=warn -i dl.aria2
 else
-  echo "(无 aria2c，回退 curl 单接连下)"
+  echo "！未找到 aria2c —— 单连接会非常慢；建议先安装："
+  echo "    Debian/Ubuntu: sudo apt install -y aria2"
+  echo "    Fedora:        sudo dnf install -y aria2"
+  echo "    Arch:          sudo pacman -S aria2"
+  echo "    macOS:         brew install aria2"
+  echo "    Windows:       winget install aria2.aria2"
+  echo "  临时回退：curl 单接连下（可续传，慢）"
   while IFS=$'\t' read -r n u; do curl -L -C - --retry 5 -o "$n" "$u"; done < assets.tsv
 fi
 
