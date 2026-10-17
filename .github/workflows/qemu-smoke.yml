@@ -1,7 +1,7 @@
 name: qemu-smoke
 
-# 虚拟开发板：构建 qemuarm64 精简镜像并做一次启动冒烟（无需 Jetson 硬件）。
-# 用 GitHub runner 的网络（不受墙影响）构建，验证发行版在 aarch64 虚拟板上能起来。
+# 虚拟开发板：构建 qemux86-64 精简镜像并做一次启动冒烟（无需 Jetson 硬件；有 KVM 的 runner 上可近原生速度）。
+# 用 GitHub runner 的网络（不受墙影响）构建，验证发行版在 x86_64 虚拟板上能起来。
 on:
   workflow_dispatch:
   push:
@@ -46,7 +46,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq chrpath diffstat python3-websockets qemu-system-arm
+          sudo apt-get install -y -qq chrpath diffstat python3-websockets qemu-system-x86
           python -m pip install kas==5.3
 
       - name: Generate CI kas config (neutralize host paths)
@@ -63,7 +63,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p build
-          for TAG in sstate-jetson sstate-qemu; do
+          for TAG in sstate-jetson sstate-qemu-x86; do
             gh release view "$TAG" >/dev/null 2>&1 || continue
             rm -rf /tmp/sst; mkdir -p /tmp/sst
             gh release download "$TAG" -D /tmp/sst -p 'LATEST' 2>/dev/null || true
@@ -85,7 +85,7 @@ jobs:
       - name: kas checkout
         run: kas checkout kas-ci.yml:kas-qemu.yml
 
-      - name: Build embedai-qemu-image (aarch64, resumable 5.5h budget)
+      - name: Build embedai-qemu-image (x86_64, resumable 5.5h budget)
         run: |
           LOG="$PWD/build-run.log"
           ( while true; do df -h / >> disk.log; sleep 120; done ) &
@@ -116,8 +116,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: embedai-qemu-image-aarch64
-          path: build/tmp/deploy/images/qemuarm64/embedai-qemu-image-*
+          name: embedai-qemu-image-x86_64
+          path: build/tmp/deploy/images/qemux86-64/embedai-qemu-image-*
           if-no-files-found: warn
           retention-days: 14
 
@@ -132,9 +132,9 @@ jobs:
           gh release view image-latest >/dev/null 2>&1 || \
             gh release create image-latest \
               --title "embedai images (rolling)" \
-              --notes "Rolling built images: Jetson Orin Nano (\`embedai-image\`) + QEMU aarch64 (\`embedai-qemu-image\`). Assets are replaced on each build." \
+              --notes "Rolling built images: Jetson Orin Nano (\`embedai-image\`) + QEMU x86_64 (\`embedai-qemu-image\`). Assets are replaced on each build." \
               --prerelease
-          files=$(find -L build/tmp/deploy/images/qemuarm64 -maxdepth 1 -type f -name 'embedai-qemu-image-*')
+          files=$(find -L build/tmp/deploy/images/qemux86-64 -maxdepth 1 -type f -name 'embedai-qemu-image-*')
           if [ -n "$files" ]; then
             gh release upload image-latest $files --clobber
             echo "uploaded:"; echo "$files"
@@ -144,12 +144,12 @@ jobs:
 
       - name: Boot smoke test (runqemu, timeboxed)
         run: |
-          if ! ls build/tmp/deploy/images/qemuarm64/embedai-qemu-image-* >/dev/null 2>&1; then
+          if ! ls build/tmp/deploy/images/qemux86-64/embedai-qemu-image-* >/dev/null 2>&1; then
             echo "镜像尚未生成（本轮预算到点暂停），跳过启动测试"
             exit 0
           fi
           set +e
-          timeout 1500 kas shell kas-ci.yml:kas-qemu.yml -c "runqemu qemuarm64 nographic snapshot" > boot.log 2>&1
+          timeout 1500 kas shell kas-ci.yml:kas-qemu.yml -c "runqemu qemux86-64 nographic snapshot" > boot.log 2>&1
           echo "runqemu exit: $?"
           set -e
           echo "===== boot.log (tail) ====="
@@ -183,7 +183,7 @@ jobs:
           # 镜像已发布、冒烟已跑完，删掉不再需要的 tmp/ 与 downloads/ 给分卷腾地
           rm -rf build/tmp build/downloads
           echo "===== df after freeing ====="; df -h /
-          TAG=sstate-qemu
+          TAG=sstate-qemu-x86
           gh release view "$TAG" >/dev/null 2>&1 || \
             gh release create "$TAG" --title "Yocto sstate cache (QEMU)" \
               --notes "Versioned sstate sets. LATEST points to the newest complete set; older sets are cleaned up. Assets are never overwritten." --prerelease
