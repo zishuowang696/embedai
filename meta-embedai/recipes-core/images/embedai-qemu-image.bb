@@ -1,4 +1,4 @@
-DESCRIPTION = "embedai 虚拟开发板镜像（QEMU aarch64，CPU-only）：验证发行版启动 + 本地推理链路。"
+DESCRIPTION = "embedai 虚拟开发板镜像（QEMU aarch64 / x86_64，CPU-only）：验证发行版启动 + 本地推理链路。"
 LICENSE = "MIT"
 
 # 复用 OE-Core 的精简镜像（packagegroup-core-boot），再加 SSH 管理入口。
