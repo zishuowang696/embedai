@@ -4,6 +4,11 @@ name: qemu-smoke
 # 用 GitHub runner 的网络（不受墙影响）构建，验证发行版在 x86_64 虚拟板上能起来。
 on:
   workflow_dispatch:
+    inputs:
+      boot_test:
+        description: "构建后是否启动 QEMU 冒烟（默认否，只编镜像）"
+        type: boolean
+        default: false
   push:
     paths:
       - 'kas-qemu.yml'
@@ -143,6 +148,7 @@ jobs:
           fi
 
       - name: Boot smoke test (runqemu, timeboxed)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.boot_test }}
         run: |
           if ! ls build/tmp/deploy/images/qemux86-64/embedai-qemu-image-* >/dev/null 2>&1; then
             echo "镜像尚未生成（本轮预算到点暂停），跳过启动测试"
