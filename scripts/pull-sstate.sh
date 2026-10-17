@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 拉取 CI 持久化的 sstate（Release: sstate-jetson / sstate-qemu）→ 解压进本地 build/sstate-cache。
+# 拉取 CI 持久化的 sstate（Release: sstate-jetson / sstate-qemu-x86）→ 解压进本地 build/sstate-cache。
 #
 # 目的：本地增量构建复用 CI 已编译的任务（改一个 recipe = 只重编它，其余命中 sstate）。
 #
@@ -12,7 +12,7 @@
 # 用法：
 #   scripts/pull-sstate.sh [machine|qemu]
 #     machine（默认）: 拉 sstate-jetson（jetson-orin-nano-devkit-nvme）
-#     qemu            : 拉 sstate-qemu（qemuarm64）
+#     qemu            : 拉 sstate-qemu-x86（qemux86-64）
 #
 # 环境变量：
 #   EMBEDAI_REPO       默认 zishuowang696/embedai
@@ -28,7 +28,7 @@ set -euo pipefail
 WHICH="${1:-machine}"
 case "$WHICH" in
   machine|jetson) TAG="${EMBEDAI_SSTATE_TAG:-sstate-jetson}" ;;
-  qemu)           TAG="${EMBEDAI_SSTATE_TAG:-sstate-qemu}" ;;
+  qemu)           TAG="${EMBEDAI_SSTATE_TAG:-sstate-qemu-x86}" ;;
   *) echo "用法: $0 [machine|qemu]"; exit 1 ;;
 esac
 

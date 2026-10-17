@@ -83,7 +83,7 @@ GitHub Actions 的缓存**每仓库上限 10GB**，而本项目的 Yocto `sstate
 
 改用 **GitHub Release** 持久化（单文件 <2GiB、每 release ≤1000 资产、总大小不限）：
 
-- CI 编译产物按 **1.9GB 分卷**上传到 Release（`sstate-jetson` / `sstate-qemu`）
+- CI 编译产物按 **1.9GB 分卷**上传到 Release（`sstate-jetson` / `sstate-qemu-x86`）
 - **版本化、非覆盖**：先传完整套，最后原子切换 `LATEST` 指针 → 中断也不会丢旧缓存
 - 还原时读 `LATEST` → 下载该套 → `sha256sum -c` 校验 → 解压进 `build/sstate-cache`
 - CI 内网拉取 15GB 约 **3 分钟**
@@ -92,7 +92,8 @@ GitHub Actions 的缓存**每仓库上限 10GB**，而本项目的 Yocto `sstate
 
 ```bash
 scripts/pull-sstate.sh          # 拉 sstate-jetson → build/sstate-cache
-scripts/pull-sstate.sh qemu     # 拉 sstate-qemu（qemuarm64）
+scripts/pull-sstate.sh qemu     # 拉 sstate-qemu-x86（qemux86-64）
+scripts/run-native.sh           # 原生跑 Qwen2.5-0.5B（验证模型/速度，不经 QEMU）
 ```
 
 > 原则：**CI 编全量、本地只增量**。详见 [docs/17-dev-loop.md](docs/17-dev-loop.md)。
